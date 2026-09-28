@@ -6,6 +6,7 @@ import { Block, HOTBAR } from './world/blocks';
 import { TerrainGenerator } from './world/generator';
 import { raycastVoxels, type RayHit } from './world/raycast';
 import { World } from './world/world';
+import { CHUNK_SIZE } from './world/chunk';
 import { Input } from './player/input';
 import { Player } from './player/player';
 import { Hud } from './ui/hud';
@@ -14,11 +15,13 @@ const REACH = 6;
 /** Physics runs at a fixed rate so movement speed is independent of frame rate. */
 const STEP = 1 / 120;
 const SEED = 1337;
+/** Chunks in each direction; the haze is tuned to dissolve terrain exactly at this edge. */
+const RENDER_DISTANCE = 7;
 
-const view = new GameScene(document.getElementById('app')!);
+const view = new GameScene(document.getElementById('app')!, RENDER_DISTANCE * CHUNK_SIZE - 6, SEED);
 const atlas = createAtlasCanvas();
 const material = new THREE.MeshLambertMaterial({ map: createAtlasTexture(atlas), vertexColors: true });
-const world = new World(view.scene, material, new TerrainGenerator(SEED));
+const world = new World(view.scene, material, new TerrainGenerator(SEED), RENDER_DISTANCE);
 const player = new Player(view.camera);
 const input = new Input(view.renderer.domElement);
 const hud = new Hud(atlas);
@@ -96,7 +99,7 @@ function frame(now: number): void {
   }
   world.update(player.position.x, player.position.z);
   updateTarget();
-  view.followSun(player.position);
+  view.update(now / 1000, player.position);
   view.render();
 
   frames++;

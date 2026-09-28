@@ -1,5 +1,8 @@
 html, body { margin: 0; height: 100%; overflow: hidden; background: #87b5e8; font-family: system-ui, sans-serif; }
 #app, #app canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#app.underwater::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 1; background: rgba(20, 90, 130, .38); }
+/* Soft vignette pulls the eye to the centre of the frame. */
+#app::after { content: ''; position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(20, 10, 0, .35) 100%); }
 
 #crosshair { position: fixed; left: 50%; top: 50%; width: 20px; height: 20px; transform: translate(-50%, -50%); pointer-events: none; mix-blend-mode: difference; }
 #crosshair::before, #crosshair::after { content: ''; position: absolute; background: #fff; }
