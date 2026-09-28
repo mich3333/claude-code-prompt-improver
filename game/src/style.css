@@ -1,0 +1,23 @@
+html, body { margin: 0; height: 100%; overflow: hidden; background: #87b5e8; font-family: system-ui, sans-serif; }
+#app, #app canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+#crosshair { position: fixed; left: 50%; top: 50%; width: 20px; height: 20px; transform: translate(-50%, -50%); pointer-events: none; mix-blend-mode: difference; }
+#crosshair::before, #crosshair::after { content: ''; position: absolute; background: #fff; }
+#crosshair::before { left: 9px; top: 0; width: 2px; height: 20px; }
+#crosshair::after { top: 9px; left: 0; height: 2px; width: 20px; }
+
+#hotbar { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; padding: 4px; background: rgba(0,0,0,.45); border-radius: 6px; pointer-events: none; }
+#hotbar .slot { position: relative; width: 48px; height: 48px; border: 3px solid rgba(255,255,255,.25); border-radius: 4px; box-sizing: border-box; display: grid; place-items: center; }
+#hotbar .slot.active { border-color: #fff; }
+#hotbar .slot canvas { width: 32px; height: 32px; image-rendering: pixelated; }
+#hotbar .slot span { position: absolute; top: 1px; left: 4px; font-size: 10px; color: #fff; text-shadow: 0 1px 2px #000; }
+#hotbar .label { position: absolute; bottom: 62px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 14px; text-shadow: 0 1px 3px #000; white-space: nowrap; }
+
+#debug { position: fixed; top: 8px; left: 8px; color: #fff; font: 12px/1.4 ui-monospace, monospace; text-shadow: 0 1px 2px #000; pointer-events: none; white-space: pre; }
+
+#overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.45); color: #fff; cursor: pointer; }
+#overlay.hidden { display: none; }
+#overlay .panel { text-align: center; padding: 24px 32px; background: rgba(0,0,0,.5); border-radius: 10px; max-width: calc(100vw - 32px); box-sizing: border-box; }
+#overlay h1 { margin: 0 0 8px; font-size: 32px; }
+#overlay .start { font-size: 18px; margin: 0 0 16px; }
+#overlay ul { list-style: none; padding: 0; margin: 0; font-size: 14px; line-height: 1.8; opacity: .9; }
