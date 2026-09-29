@@ -7,7 +7,7 @@ export const ZENITH = new THREE.Color(0x2463cf);
 /** Light sky blue between horizon and zenith, so the warm-to-blue blend never passes through lilac. */
 export const SKY_MID = new THREE.Color(0x6fa6e6);
 export const HORIZON = new THREE.Color(0xf4d2ad);
-export const WATER_LEVEL = 21.85;
+export { WATER_LEVEL } from '../world/water';
 
 /**
  * GLSL sky colour for a view direction. skyBase is the gradient plus the broad sun glow and is

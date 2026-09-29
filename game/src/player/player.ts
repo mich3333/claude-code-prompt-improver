@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { World } from '../world/world';
 import type { Input } from './input';
+import { waterDepth } from '../world/water';
 
 const HALF_WIDTH = 0.3;
 const HEIGHT = 1.8;
@@ -13,6 +14,19 @@ const TERMINAL_VELOCITY = 55;
 const MOUSE_SENSITIVITY = 0.0022;
 const SKIN = 1e-4;
 
+// Water: buoyancy nearly cancels gravity, drag caps speeds, Space swims up.
+const SWIM_SPEED = 2.6;
+const SWIM_SPRINT_SPEED = 3.4;
+const WATER_GRAVITY = 9;
+const SWIM_UP_ACCEL = 22;
+const WATER_DRAG = 3;
+const MAX_SINK_SPEED = 3;
+const MAX_SWIM_UP_SPEED = 4;
+/** Upward kick when swimming into the shore at the surface, enough to climb out onto the bank. */
+const WATER_EXIT_VELOCITY = 9;
+/** Feet this deep (blocks) or deeper count as swimming. */
+const SWIM_DEPTH = 0.2;
+
 /** First-person player: `position` is the centre of the feet. */
 export class Player {
   readonly position = new THREE.Vector3();
@@ -20,6 +34,10 @@ export class Player {
   yaw = 0;
   pitch = 0;
   onGround = false;
+  /** Feet are under water deep enough to swim. */
+  inWater = false;
+  /** Moved into a wall on a horizontal axis during the last update. */
+  private hitWall = false;
 
   constructor(readonly camera: THREE.PerspectiveCamera) {}
 
@@ -41,7 +59,10 @@ export class Player {
 
     const fwd = (input.isDown('KeyW') ? 1 : 0) - (input.isDown('KeyS') ? 1 : 0);
     const strafe = (input.isDown('KeyD') ? 1 : 0) - (input.isDown('KeyA') ? 1 : 0);
-    const speed = input.isDown('ShiftLeft') || input.isDown('ShiftRight') ? SPRINT_SPEED : WALK_SPEED;
+    const depth = waterDepth(this.position.y);
+    this.inWater = depth >= SWIM_DEPTH;
+    const sprint = input.isDown('ShiftLeft') || input.isDown('ShiftRight');
+    const speed = this.inWater ? (sprint ? SWIM_SPRINT_SPEED : SWIM_SPEED) : sprint ? SPRINT_SPEED : WALK_SPEED;
     const sin = Math.sin(this.yaw);
     const cos = Math.cos(this.yaw);
     let wx = -sin * fwd + cos * strafe;
@@ -51,23 +72,33 @@ export class Player {
       wx = (wx / len) * speed;
       wz = (wz / len) * speed;
     }
-    // Snappy on the ground, a little floaty in the air.
-    const accel = Math.min(1, dt * (this.onGround ? 20 : 6));
+    // Snappy on the ground, a little floaty in the air, sluggish in water.
+    const accel = Math.min(1, dt * (this.inWater ? 5 : this.onGround ? 20 : 6));
     this.velocity.x += (wx - this.velocity.x) * accel;
     this.velocity.z += (wz - this.velocity.z) * accel;
 
     const jump = input.consumePress('Space') || input.isDown('Space');
-    if (jump && this.onGround) {
-      this.velocity.y = JUMP_VELOCITY;
-      this.onGround = false;
+    if (this.inWater) {
+      this.velocity.y -= WATER_GRAVITY * dt;
+      if (jump) this.velocity.y += SWIM_UP_ACCEL * dt;
+      this.velocity.y *= Math.exp(-WATER_DRAG * dt);
+      this.velocity.y = Math.min(MAX_SWIM_UP_SPEED, Math.max(-MAX_SINK_SPEED, this.velocity.y));
+      // Swimming into the bank near the surface: kick up and out.
+      if (jump && this.hitWall && depth < 1.2) this.velocity.y = WATER_EXIT_VELOCITY;
+    } else {
+      if (jump && this.onGround) {
+        this.velocity.y = JUMP_VELOCITY;
+        this.onGround = false;
+      }
+      this.velocity.y = Math.max(-TERMINAL_VELOCITY, this.velocity.y - GRAVITY * dt);
     }
-    this.velocity.y = Math.max(-TERMINAL_VELOCITY, this.velocity.y - GRAVITY * dt);
 
     // Substep so no single move exceeds ~0.4 blocks on any axis (no tunnelling).
     const maxMove = Math.max(Math.abs(this.velocity.x), Math.abs(this.velocity.y), Math.abs(this.velocity.z)) * dt;
     const steps = Math.max(1, Math.ceil(maxMove / 0.4));
     const h = dt / steps;
     this.onGround = false;
+    this.hitWall = false;
     for (let i = 0; i < steps; i++) {
       this.moveAxis(1, this.velocity.y * h, world);
       this.moveAxis(0, this.velocity.x * h, world);
@@ -134,6 +165,7 @@ export class Player {
       p.setComponent(axis, limit + lo + (axis === 1 ? 0 : SKIN));
       if (axis === 1) this.onGround = true;
     }
+    if (axis !== 1) this.hitWall = true;
     this.velocity.setComponent(axis, 0);
   }
 }
