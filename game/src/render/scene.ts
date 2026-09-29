@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { HORIZON, SUN_COLOR, SUN_DIR, WATER_LEVEL } from './atmosphere';
+import { HORIZON, SUN_COLOR, SUN_DIR, WATER_LEVEL, skyFogAmount } from './atmosphere';
 import { Clouds } from './clouds';
 import { Sky } from './sky';
 import { Water } from './water';
@@ -76,6 +76,7 @@ export class GameScene {
     if (under === this.underwater) return;
     this.underwater = under;
     this.scene.fog = under ? this.underwaterFog : this.fog;
+    skyFogAmount.value = under ? 0 : 1;
     this.scene.background = under ? UNDERWATER : HORIZON;
     this.sky.mesh.visible = this.water.mesh.visible = this.clouds.mesh.visible = !under;
     this.container.classList.toggle('underwater', under);

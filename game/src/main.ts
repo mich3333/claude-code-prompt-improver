@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import './style.css';
+import { applySkyFog } from './render/atmosphere';
 import { GameScene } from './render/scene';
 import { createAtlasCanvas, createAtlasTexture } from './render/textures';
 import { Block, HOTBAR } from './world/blocks';
@@ -21,6 +22,7 @@ const RENDER_DISTANCE = 7;
 const view = new GameScene(document.getElementById('app')!, RENDER_DISTANCE * CHUNK_SIZE - 6, SEED);
 const atlas = createAtlasCanvas();
 const material = new THREE.MeshLambertMaterial({ map: createAtlasTexture(atlas), vertexColors: true });
+applySkyFog(material);
 const world = new World(view.scene, material, new TerrainGenerator(SEED), RENDER_DISTANCE);
 const player = new Player(view.camera);
 const input = new Input(view.renderer.domElement);

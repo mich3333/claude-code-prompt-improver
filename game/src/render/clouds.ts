@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { hash2, valueNoise } from '../world/noise';
-import { HORIZON, SUN_COLOR } from './atmosphere';
+import { SKY_GLSL, skyUniforms } from './atmosphere';
 
 const CELL = 12;
 const HEIGHT = 96;
@@ -15,37 +15,33 @@ export class Clouds {
 
   constructor(private readonly seed: number) {
     const geo = new THREE.BoxGeometry(1, 1, 1);
+    // Opaque, so the faces between neighbouring cells stay hidden; distance haze blends each
+    // cloud into the exact sky colour behind it instead of fading it out with transparency.
     const material = new THREE.ShaderMaterial({
-      uniforms: {
-        uHorizon: { value: HORIZON },
-        uSun: { value: SUN_COLOR },
-        uFar: { value: RANGE * CELL * 0.95 },
-      },
+      uniforms: { ...skyUniforms(), uFar: { value: RANGE * CELL * 0.95 } },
       vertexShader: /* glsl */ `
         varying vec3 vNormal;
-        varying float vDist;
+        varying vec3 vWorld;
         void main() {
           vec4 world = modelMatrix * instanceMatrix * vec4(position, 1.0);
           vNormal = normal;
-          vDist = length(world.xz - cameraPosition.xz);
+          vWorld = world.xyz;
           gl_Position = projectionMatrix * viewMatrix * world;
         }`,
       fragmentShader: /* glsl */ `
-        uniform vec3 uHorizon;
-        uniform vec3 uSun;
         uniform float uFar;
         varying vec3 vNormal;
-        varying float vDist;
+        varying vec3 vWorld;
+        ${SKY_GLSL}
         void main() {
           // Sunlit tops, warm sides, cool shaded undersides.
-          vec3 col = vNormal.y > 0.5 ? vec3(1.0) : vNormal.y < -0.5 ? vec3(0.72, 0.76, 0.86) : mix(vec3(0.9), uSun, 0.25);
-          float haze = smoothstep(uFar * 0.35, uFar, vDist);
-          gl_FragColor = vec4(mix(col, uHorizon, haze), 0.9 * (1.0 - haze * haze));
+          vec3 col = vNormal.y > 0.5 ? vec3(1.0) : vNormal.y < -0.5 ? vec3(0.74, 0.78, 0.88) : mix(vec3(0.92), uSunColor, 0.22);
+          vec3 dir = normalize(vWorld - cameraPosition);
+          float haze = smoothstep(uFar * 0.3, uFar, length(vWorld.xz - cameraPosition.xz));
+          gl_FragColor = vec4(mix(col, skyBase(dir), haze), 1.0);
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
         }`,
-      transparent: true,
-      depthWrite: false,
       fog: false,
     });
     this.mesh = new THREE.InstancedMesh(geo, material, (RANGE * 2 + 1) ** 2);

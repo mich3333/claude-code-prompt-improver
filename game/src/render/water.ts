@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { SKY_GLSL, skyUniforms, WATER_LEVEL } from './atmosphere';
+import { SKY_FOG_FRAGMENT, SKY_GLSL, skyFogAmount, skyUniforms, WATER_LEVEL } from './atmosphere';
 
 /**
  * Flat animated water sheet at sea level that follows the player. It reflects the sky
@@ -25,7 +25,9 @@ export class Water {
       fragmentShader: /* glsl */ `
         #include <fog_pars_fragment>
         uniform float uTime;
+        uniform float uSkyFog;
         varying vec3 vWorld;
+        #define vSkyFogWorld vWorld
         ${SKY_GLSL}
         void main() {
           vec2 p = vWorld.xz;
@@ -43,13 +45,13 @@ export class Water {
           gl_FragColor = vec4(col, mix(0.72, 0.95, fresnel));
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
-          #include <fog_fragment>
+          ${SKY_FOG_FRAGMENT}
         }`,
       transparent: true,
       depthWrite: false,
       fog: true,
     });
-    Object.assign(this.material.uniforms, skyUniforms());
+    Object.assign(this.material.uniforms, skyUniforms(), { uSkyFog: skyFogAmount });
     const geo = new THREE.PlaneGeometry(size, size);
     geo.rotateX(-Math.PI / 2);
     this.mesh = new THREE.Mesh(geo, this.material);
