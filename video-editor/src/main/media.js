@@ -5,8 +5,7 @@ import { createRequire } from 'node:module';
 import { existsSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { IMAGE_EXTENSIONS } from '../shared/timeline.js';
+import { IMAGE_EXTENSIONS, mediaUrl } from '../shared/timeline.js';
 import { buildExport } from '../shared/ffmpeg.js';
 
 const require = createRequire(import.meta.url);
@@ -88,7 +87,7 @@ export async function probe(file) {
   const rotated = Math.abs(Number(video?.side_data_list?.find((d) => d.rotation != null)?.rotation ?? video?.tags?.rotate ?? 0)) % 180 === 90;
   return {
     path: file,
-    url: pathToFileURL(file).href,
+    url: mediaUrl(file),
     name: path.basename(file),
     kind,
     duration,

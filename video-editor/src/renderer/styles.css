@@ -15,6 +15,11 @@
   --warn: #e3a008;
   --success: #30a46c;
   --radius: 8px;
+  /* Motion tokens (see motion.js): strong ease-out, short durations. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --dur-fast: 150ms;
+  --dur-press: 160ms;
   color-scheme: dark;
 }
 
@@ -30,13 +35,13 @@ html, body {
   overflow: hidden;
 }
 
-body {
+#root {
+  height: 100%;
   display: grid;
   grid-template-rows: 52px minmax(0, 1fr) 270px;
 }
 
-body.drop-target::after {
-  content: "Drop to import";
+.drop-overlay {
   position: fixed;
   inset: 12px;
   border: 2px dashed var(--accent);
@@ -49,6 +54,7 @@ body.drop-target::after {
   color: var(--accent);
   z-index: 50;
   pointer-events: none;
+  will-change: transform, opacity;
 }
 
 button { font: inherit; color: inherit; }
@@ -56,6 +62,15 @@ input, select, textarea { font: inherit; color: var(--text); }
 
 .icon { display: inline-flex; width: 16px; height: 16px; flex: none; }
 .icon svg { width: 100%; height: 100%; fill: currentColor; }
+
+.btn, .icon-btn, .segmented button {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+/* Buttons respond on press: a small scale-down that feels physical. */
+.btn:active:not(:disabled), .icon-btn:active:not(:disabled) { transform: scale(0.97); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .btn {
   display: inline-flex;
@@ -69,7 +84,12 @@ input, select, textarea { font: inherit; color: var(--text); }
   cursor: pointer;
   white-space: nowrap;
 }
-.btn:hover:not(:disabled) { background: #262b33; border-color: #48505c; }
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover:not(:disabled) { background: #262b33; border-color: #48505c; }
+        .segmented button:hover { color: var(--text); }
+  .tl-clip:hover .tl-handle, .tl-text:hover .tl-handle { background: rgba(255, 255, 255, 0.25); }
+    .transport .play:hover { background: var(--accent-2); }
+}
 .btn:disabled { opacity: 0.45; cursor: default; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
 .btn.primary:hover:not(:disabled) { background: var(--accent-2); }
@@ -174,7 +194,7 @@ select {
 .empty-preview[hidden] { display: none; }
 .transport { display: flex; align-items: center; justify-content: center; gap: 4px; }
 .transport .play { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: #fff; }
-.transport .play:hover { background: var(--accent-2) !important; }
+.icon-swap { display: inline-grid; place-items: center; }
 .time { margin-left: 12px; font-variant-numeric: tabular-nums; color: var(--muted); min-width: 140px; }
 
 /* ---------- inspector ---------- */
@@ -212,14 +232,18 @@ input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px;
   flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; height: 26px;
   border: 0; border-radius: 5px; background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; white-space: nowrap;
 }
-.segmented button:hover { color: var(--text); }
-.segmented button.active { background: var(--panel-2); color: var(--text); box-shadow: 0 0 0 1px var(--line-2); }
+.segmented button { position: relative; }
+.segmented button.active { color: var(--text); }
+/* The active pill slides between options (motion layoutId). */
+.seg-pill { position: absolute; inset: 0; border-radius: 5px; background: var(--panel-2); box-shadow: 0 0 0 1px var(--line-2); }
+.seg-label { position: relative; display: inline-flex; align-items: center; gap: 6px; }
 .segmented.wrap, .segmented.grid { flex-wrap: wrap; }
 .segmented.wrap button { flex: 0 0 calc(20% - 4px); }
 .segmented.grid button { flex: 0 0 calc(50% - 2px); height: 30px; }
 .aspect-swatch { display: inline-block; height: 14px; border: 1.5px solid currentColor; border-radius: 2px; }
 
-.shortcuts { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; margin: 0; }
+.shortcuts { display: grid; gap: 6px; margin: 0; }
+.shortcut { display: grid; grid-template-columns: 120px 1fr; gap: 10px; align-items: baseline; }
 .shortcuts dd { margin: 0; color: var(--muted); }
 kbd {
   display: inline-block; padding: 1px 6px; border: 1px solid var(--line-2); border-bottom-width: 2px;
@@ -239,8 +263,7 @@ kbd {
   height: 64px; display: flex; align-items: center; padding-left: 12px; color: var(--muted); font-size: 12px;
   border-bottom: 1px solid var(--line);
 }
-.tl-header-text { height: 38px; }
-.tl-header:last-child { height: 40px; }
+.tl-header-music { height: 40px; }
 .tl-scroll { overflow-x: auto; overflow-y: hidden; position: relative; }
 .tl-content { position: relative; min-height: 100%; }
 .tl-ruler { position: relative; height: 24px; border-bottom: 1px solid var(--line); cursor: text; }
@@ -303,6 +326,7 @@ kbd {
 
 .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); display: grid; place-items: center; z-index: 40; }
 .modal {
+  transform-origin: center;
   width: min(460px, calc(100vw - 32px)); background: var(--panel); border: 1px solid var(--line-2); border-radius: 12px;
   padding: 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
@@ -312,15 +336,24 @@ kbd {
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
 .modal-error { margin: 0; max-height: 200px; overflow: auto; white-space: pre-wrap; font-size: 11px; color: #ffb4b6; background: var(--bg); padding: 10px; border-radius: 6px; user-select: text; }
 .progress { height: 8px; border-radius: 4px; background: var(--bg); overflow: hidden; }
-.progress-fill { height: 100%; width: 0; background: var(--accent); transition: width 0.15s; }
+.progress-fill { height: 100%; width: 100%; background: var(--accent); transform-origin: left; transform: scaleX(0); }
 .progress-label { color: var(--muted); font-variant-numeric: tabular-nums; }
 
-.toasts { position: fixed; right: 16px; bottom: 286px; display: flex; flex-direction: column; gap: 8px; z-index: 60; max-width: 420px; }
-.toast {
-  padding: 10px 14px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line-2);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); transition: opacity 0.3s, transform 0.3s;
+.toasts {
+  position: fixed; right: 16px; bottom: 286px; display: flex; flex-direction: column; gap: 8px; z-index: 60;
+  width: min(380px, calc(100vw - 32px)); margin: 0; padding: 0; list-style: none;
 }
-.toast.error { border-color: var(--danger); }
-.toast.warn { border-color: var(--warn); }
-.toast.success { border-color: var(--success); }
-.toast.leaving { opacity: 0; transform: translateY(6px); }
+.toast {
+  display: flex; align-items: flex-start; gap: 10px; padding: 11px 14px; border-radius: 10px; cursor: default;
+  background: var(--panel-2); border: 1px solid var(--line-2); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.toast .icon { margin-top: 1px; color: var(--muted); }
+.toast.error .icon { color: var(--danger); }
+.toast.warn .icon { color: var(--warn); }
+.toast.success .icon { color: var(--success); }
+
+/* Respect the OS setting: no press scaling or other transform motion. */
+@media (prefers-reduced-motion: reduce) {
+  .btn:active:not(:disabled), .icon-btn:active:not(:disabled) { transform: none; }
+  * { scroll-behavior: auto !important; }
+}

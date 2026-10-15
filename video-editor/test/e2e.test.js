@@ -68,6 +68,20 @@ test('edit and export a video through the UI', { skip: noDisplay && 'no display 
     await page.click('#btn-redo');
     assert.equal((await project()).clips.length, 4);
 
+    // Drag the first clip to the end of the timeline, then undo the move.
+    const before = (await project()).clips.map((c) => c.id);
+    const first = await page.locator('.tl-track-video .tl-clip').nth(0).boundingBox();
+    const last = await page.locator('.tl-track-video .tl-clip').nth(3).boundingBox();
+    await page.mouse.move(first.x + first.width / 2, first.y + first.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(first.x + first.width / 2 + 30, first.y + first.height / 2, { steps: 4 });
+    await page.mouse.move(last.x + last.width + 20, first.y + first.height / 2, { steps: 8 });
+    await page.mouse.up();
+    assert.deepEqual((await project()).clips.map((c) => c.id), [...before.slice(1), before[0]]);
+    await page.waitForTimeout(350); // let the reorder glide finish
+    await page.click('#btn-undo');
+    assert.deepEqual((await project()).clips.map((c) => c.id), before);
+
     // Second clip: speed 2x, Vintage filter, crossfade from the previous clip.
     await page.click('.tl-track-video .tl-clip >> nth=1');
     await page.click('.insp button[data-value="2"]');

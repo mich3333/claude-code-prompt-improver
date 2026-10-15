@@ -13,10 +13,11 @@ const smoothstep = (a, b, x) => {
 };
 
 export class Player {
-  constructor(canvas, store) {
-    this.canvas = canvas;
-    this.ctx = canvas.getContext('2d');
+  constructor(store) {
+    this.canvas = null;
+    this.ctx = null;
     this.store = store;
+    this.version = 0; // bumps on every time/playing change (for React)
     this.time = 0;
     this.playing = false;
     this.media = new Map(); // clip id -> { el, url }
@@ -24,7 +25,13 @@ export class Player {
     this.listeners = new Set();
     this.raf = 0;
     this.drawQueued = false;
+  }
+
+  attach(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
     this.resize();
+    this.sync();
   }
 
   get project() {
@@ -37,13 +44,16 @@ export class Player {
 
   onTime(fn) {
     this.listeners.add(fn);
+    return () => this.listeners.delete(fn);
   }
 
   emitTime() {
+    this.version += 1;
     for (const fn of this.listeners) fn(this.time, this.playing);
   }
 
   resize() {
+    if (!this.canvas) return;
     const { width, height } = frameSize(this.project.aspect, 540);
     if (this.canvas.width !== width || this.canvas.height !== height) {
       this.canvas.width = width;
@@ -259,6 +269,7 @@ export class Player {
   }
 
   draw() {
+    if (!this.canvas) return;
     const { ctx } = this;
     const W = this.canvas.width;
     const H = this.canvas.height;
@@ -324,6 +335,7 @@ export class Player {
     const W = this.canvas.width;
     const H = this.canvas.height;
     const texts = this.project.texts;
+    if (!this.canvas) return null;
     for (let i = texts.length - 1; i >= 0; i--) {
       const t = texts[i];
       if (this.time < t.start || this.time >= t.end) continue;

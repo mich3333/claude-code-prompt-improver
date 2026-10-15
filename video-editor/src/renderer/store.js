@@ -1,7 +1,7 @@
 // Editor state: the project (saved, undoable) plus UI state (selection,
 // playhead, zoom). Listeners are notified after every change.
 
-import { createProject } from '../shared/timeline.js';
+import { createProject, mediaUrl } from '../shared/timeline.js';
 
 const HISTORY_LIMIT = 150;
 
@@ -12,6 +12,7 @@ export class Store {
     this.selection = null; // { type: 'clip' | 'text' | 'music', id }
     this.filePath = null;
     this.listeners = new Set();
+    this.version = 0; // bumps on every change (for React)
     this.resetHistory();
   }
 
@@ -21,6 +22,7 @@ export class Store {
   }
 
   emit(reason = 'project') {
+    this.version += 1;
     for (const fn of this.listeners) fn(reason);
   }
 
@@ -91,6 +93,10 @@ export class Store {
 
   load(project, filePath) {
     this.project = { media: [], texts: [], clips: [], music: null, ...project };
+    // URLs are derived from paths (older project files stored file:// URLs).
+    for (const item of [...this.project.clips, ...this.project.media, this.project.music]) {
+      if (item) item.url = mediaUrl(item.path);
+    }
     this.filePath = filePath;
     this.selection = null;
     this.resetHistory();

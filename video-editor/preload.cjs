@@ -17,5 +17,9 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on('export:progress', listener);
     return () => ipcRenderer.removeListener('export:progress', listener);
   },
-  onMenuCommand: (cb) => ipcRenderer.on('menu:command', (_e, name) => cb(name)),
+  onMenuCommand: (cb) => {
+    const listener = (_e, name) => cb(name);
+    ipcRenderer.on('menu:command', listener);
+    return () => ipcRenderer.removeListener('menu:command', listener);
+  },
 });

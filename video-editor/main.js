@@ -1,8 +1,9 @@
 // Electron main process: window, menus, file dialogs, media probing, export.
 
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
-import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, shell } from 'electron';
+import { createReadStream, existsSync } from 'node:fs';
+import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { Readable } from 'node:stream';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,6 +15,51 @@ const VIDEO_EXT = ['mp4', 'mov', 'm4v', 'mkv', 'webm', 'avi', 'mts', 'm2ts', '3g
 const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif'];
 const AUDIO_EXT = ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac', 'opus'];
 const PROJECT_EXT = 'clipcraft';
+
+const MIME = {
+  mp4: 'video/mp4', m4v: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', mkv: 'video/x-matroska',
+  avi: 'video/x-msvideo', '3gp': 'video/3gpp', mts: 'video/mp2t', m2ts: 'video/mp2t',
+  png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', bmp: 'image/bmp', gif: 'image/gif',
+  mp3: 'audio/mpeg', wav: 'audio/wav', m4a: 'audio/mp4', aac: 'audio/aac', ogg: 'audio/ogg', flac: 'audio/flac', opus: 'audio/ogg',
+};
+
+// The editor loads media through media:// so it works from the dev server
+// and the packaged app alike. Only files the user imported are served.
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'media', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
+]);
+const allowedMedia = new Set();
+const allowMedia = (paths) => paths.forEach((p) => p && allowedMedia.add(path.resolve(p)));
+
+async function serveMedia(request) {
+  const filePath = path.resolve(decodeURIComponent(new URL(request.url).pathname.slice(1)));
+  if (!allowedMedia.has(filePath)) return new Response('Forbidden', { status: 403 });
+  let size;
+  try {
+    ({ size } = await stat(filePath));
+  } catch {
+    return new Response('Not found', { status: 404 });
+  }
+  const headers = {
+    'Content-Type': MIME[path.extname(filePath).slice(1).toLowerCase()] ?? 'application/octet-stream',
+    'Accept-Ranges': 'bytes',
+  };
+  // Video seeking needs byte-range responses.
+  const m = /bytes=(\d*)-(\d*)/.exec(request.headers.get('range') ?? '');
+  if (m && (m[1] || m[2])) {
+    const start = m[1] ? Number(m[1]) : Math.max(0, size - Number(m[2]));
+    const end = m[1] && m[2] ? Math.min(Number(m[2]), size - 1) : size - 1;
+    if (start >= size || start > end) {
+      return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${size}` } });
+    }
+    const body = Readable.toWeb(createReadStream(filePath, { start, end }));
+    return new Response(body, {
+      status: 206,
+      headers: { ...headers, 'Content-Length': String(end - start + 1), 'Content-Range': `bytes ${start}-${end}/${size}` },
+    });
+  }
+  return new Response(Readable.toWeb(createReadStream(filePath)), { headers: { ...headers, 'Content-Length': String(size) } });
+}
 
 let win = null;
 let dirty = false;
@@ -38,7 +84,8 @@ function createWindow() {
       sandbox: true,
     },
   });
-  win.loadFile(path.join(__dirname, 'src/renderer/index.html'));
+  if (process.env.VITE_DEV_SERVER_URL) win.loadURL(process.env.VITE_DEV_SERVER_URL);
+  else win.loadFile(path.join(__dirname, 'build/renderer/index.html'));
 
   win.on('close', (e) => {
     if (!dirty) return;
@@ -106,6 +153,7 @@ async function probeAll(paths) {
   for (const p of paths) {
     try {
       items.push(await probe(p));
+      allowMedia([p]);
     } catch (e) {
       errors.push(`${path.basename(p)}: ${e.message}`);
     }
@@ -161,6 +209,7 @@ ipcMain.handle('project:open', async () => {
     ...(project.media ?? []).map((m) => m.path),
     ...(project.music ? [project.music.path] : []),
   ];
+  allowMedia(paths);
   const missing = [...new Set(paths)].filter((p) => !existsSync(p));
   return { filePath, project, missing };
 });
@@ -212,6 +261,7 @@ ipcMain.handle('export:cancel', () => exportJob?.abort());
 ipcMain.handle('shell:show', (_e, p) => shell.showItemInFolder(p));
 
 app.whenReady().then(() => {
+  protocol.handle('media', serveMedia);
   buildMenu();
   createWindow();
   app.on('activate', () => {

@@ -22,6 +22,11 @@ export const TRANSITIONS = {
 
 export const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4];
 
+// URL the editor uses to load a local file (served by the main process).
+export function mediaUrl(filePath) {
+  return `media://file/${encodeURIComponent(filePath)}`;
+}
+
 export const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif'];
 export const DEFAULT_IMAGE_DURATION = 4;
 export const MIN_CLIP_DURATION = 0.1;

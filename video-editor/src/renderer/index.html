@@ -2,98 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; media-src 'self' file:"
-    />
     <title>ClipCraft</title>
-    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header class="toolbar">
-      <div class="brand"><span class="logo">▶</span> ClipCraft <span id="project-name" class="project-name">Untitled</span></div>
-      <div class="tool-group">
-        <button id="btn-import" class="btn" type="button" title="Import videos and photos (Ctrl+I)">Import media</button>
-        <button id="btn-text" class="btn" type="button" title="Add text at playhead (T)">Add text</button>
-        <button id="btn-music" class="btn" type="button" title="Add background music (Ctrl+M)">Add music</button>
-      </div>
-      <div class="tool-group">
-        <button id="btn-undo" class="icon-btn" type="button" title="Undo (Ctrl+Z)" aria-label="Undo"></button>
-        <button id="btn-redo" class="icon-btn" type="button" title="Redo (Ctrl+Y)" aria-label="Redo"></button>
-      </div>
-      <div class="spacer"></div>
-      <label class="aspect-picker" title="Frame size">
-        <span>Frame</span>
-        <select id="aspect">
-          <option value="16:9">Landscape 16:9</option>
-          <option value="9:16">Vertical 9:16</option>
-          <option value="1:1">Square 1:1</option>
-          <option value="4:5">Portrait 4:5</option>
-        </select>
-      </label>
-      <button id="btn-export" class="btn primary" type="button" title="Export video (Ctrl+E)">Export</button>
-    </header>
-
-    <main class="workspace">
-      <aside class="bin panel">
-        <div class="panel-head">
-          <h2>Media</h2>
-          <button id="btn-bin-import" class="icon-btn" type="button" title="Import media" aria-label="Import media"></button>
-        </div>
-        <div id="bin-list" class="bin-list"></div>
-      </aside>
-
-      <section class="stage">
-        <div id="preview-wrap" class="preview-wrap">
-          <canvas id="preview"></canvas>
-          <div id="empty-preview" class="empty-preview">
-            <strong>Start your video</strong>
-            <span>Click “Import media” or drop videos and photos anywhere in this window.</span>
-          </div>
-        </div>
-        <div class="transport">
-          <button id="btn-start" class="icon-btn" type="button" title="Go to start (Home)" aria-label="Go to start"></button>
-          <button id="btn-back" class="icon-btn" type="button" title="Back 1 second" aria-label="Back 1 second"></button>
-          <button id="btn-play" class="icon-btn play" type="button" title="Play (Space)" aria-label="Play or pause"></button>
-          <button id="btn-fwd" class="icon-btn" type="button" title="Forward 1 second" aria-label="Forward 1 second"></button>
-          <button id="btn-end" class="icon-btn" type="button" title="Go to end (End)" aria-label="Go to end"></button>
-          <span id="time" class="time">00:00.0 / 00:00.0</span>
-        </div>
-      </section>
-
-      <aside id="inspector" class="inspector panel"></aside>
-    </main>
-
-    <section id="timeline" class="timeline">
-      <div class="tl-toolbar">
-        <button id="btn-split" class="btn small" type="button" title="Split clip at playhead (S)">Split</button>
-        <button id="btn-delete" class="btn small" type="button" title="Delete selected (Delete)">Delete</button>
-        <div class="spacer"></div>
-        <span class="zoom-label">Zoom</span>
-        <input id="zoom" type="range" min="0" max="100" step="0.5" value="43" aria-label="Timeline zoom" />
-        <button id="btn-fit" class="icon-btn" type="button" title="Fit timeline to window" aria-label="Fit timeline"></button>
-      </div>
-      <div class="tl-body">
-        <div class="tl-headers">
-          <div class="tl-header-ruler"></div>
-          <div class="tl-header">Video</div>
-          <div class="tl-header tl-header-text">Text</div>
-          <div class="tl-header">Music</div>
-        </div>
-        <div class="tl-scroll">
-          <div class="tl-content">
-            <div class="tl-ruler"></div>
-            <div class="tl-track tl-track-video"></div>
-            <div class="tl-track tl-track-text"></div>
-            <div class="tl-track tl-track-music"></div>
-            <div class="tl-playhead"><div class="tl-playhead-knob"></div></div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <div id="toasts" class="toasts" aria-live="polite"></div>
-    <script type="module" src="icons-init.js"></script>
-    <script type="module" src="app.js"></script>
+    <div id="root"></div>
+    <script type="module" src="./main.jsx"></script>
   </body>
 </html>
