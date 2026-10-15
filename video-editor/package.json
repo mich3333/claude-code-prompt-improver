@@ -1,0 +1,107 @@
+{
+  "name": "clipcraft-video-editor",
+  "productName": "ClipCraft",
+  "version": "1.0.0",
+  "description": "Desktop video editor: trim, join, text, music, filters, transitions and speed, exported with FFmpeg.",
+  "type": "module",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "vite build",
+    "start": "vite build && electron .",
+    "test": "node --test test/unit/*.test.js",
+    "test:export": "node --test test/export.test.js",
+    "pretest:e2e": "vite build",
+    "test:e2e": "node --test test/e2e.test.js",
+    "dist": "vite build && electron-builder"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0"
+  },
+  "devDependencies": {
+    "@fontsource/frank-ruhl-libre": "^5.3.0",
+    "@fontsource/rubik": "^5.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "electron": "^44.7.2",
+    "electron-builder": "^26.15.3",
+    "motion": "^14.2.0",
+    "playwright-core": "^1.64.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "vite": "^8.3.4"
+  },
+  "author": "ClipCraft",
+  "build": {
+    "appId": "app.clipcraft.editor",
+    "productName": "ClipCraft",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.cjs",
+      "package.json",
+      "build/**/*",
+      "src/main/**/*",
+      "src/shared/**/*",
+      "!src/renderer/**",
+      "!test/**",
+      "!scripts/**",
+      "!vite.config.js",
+      "!README.md"
+    ],
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**",
+      "node_modules/ffprobe-static/**"
+    ],
+    "mac": {
+      "category": "public.app-category.video",
+      "target": [
+        "dmg"
+      ],
+      "files": [
+        "!node_modules/ffprobe-static/bin/{linux,win32}/**",
+        "!src/renderer/**",
+        "!test/**",
+        "!scripts/**",
+        "!vite.config.js",
+        "!README.md"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "files": [
+        "!node_modules/ffprobe-static/bin/{darwin,linux}/**",
+        "!node_modules/ffprobe-static/bin/win32/ia32/**",
+        "!src/renderer/**",
+        "!test/**",
+        "!scripts/**",
+        "!vite.config.js",
+        "!README.md"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "AudioVideo",
+      "files": [
+        "!node_modules/ffprobe-static/bin/{darwin,win32}/**",
+        "!node_modules/ffprobe-static/bin/linux/ia32/**",
+        "!src/renderer/**",
+        "!test/**",
+        "!scripts/**",
+        "!vite.config.js",
+        "!README.md"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
