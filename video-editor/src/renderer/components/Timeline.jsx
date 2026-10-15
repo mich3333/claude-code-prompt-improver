@@ -300,21 +300,21 @@ export function Timeline() {
     <section id="timeline" className="timeline">
       <div className="tl-toolbar">
         <Button id="btn-split" icon="split" className="small" onClick={actions.split} disabled={!project.clips.length}
-          title="Split clip at playhead (S)">Split</Button>
+          title="פיצול קליפ בסמן הניגון (S)">פיצול</Button>
         <Button id="btn-delete" icon="trash" className="small" onClick={actions.remove} disabled={!selection}
-          title="Delete selected (Delete)">Delete</Button>
+          title="מחיקת הפריט הנבחר (Delete)">מחיקה</Button>
         <div className="spacer" />
-        <span className="zoom-label">Zoom</span>
-        <input id="zoom" type="range" min="0" max="100" step="0.5" value={ppsToSlider(pps)} aria-label="Timeline zoom"
+        <span className="zoom-label">זום</span>
+        <input id="zoom" type="range" min="0" max="100" step="0.5" value={ppsToSlider(pps)} aria-label="זום בציר הזמן"
           onChange={(e) => setZoom(sliderToPps(Number(e.target.value)))} />
-        <IconButton id="btn-fit" icon="fit" label="Fit timeline to window" onClick={() => timelineApi.zoomToFit()} />
+        <IconButton id="btn-fit" icon="fit" label="התאמת ציר הזמן לחלון" onClick={() => timelineApi.zoomToFit()} />
       </div>
-      <div className="tl-body">
+      <div className="tl-body" dir="ltr">
         <div className="tl-headers">
           <div className="tl-header-ruler" />
-          <div className="tl-header">Video</div>
-          <div className="tl-header" style={{ height: textTrackH }}>Text</div>
-          <div className="tl-header tl-header-music">Music</div>
+          <div className="tl-header">וידאו</div>
+          <div className="tl-header" style={{ height: textTrackH }}>טקסט</div>
+          <div className="tl-header tl-header-music">מוזיקה</div>
         </div>
         <div className="tl-scroll" ref={scrollRef}>
           <div className="tl-content" ref={contentRef} style={{ width }} onPointerDown={onScrub}>
@@ -329,7 +329,7 @@ export function Timeline() {
 
             <div className="tl-track tl-track-video" onDragOver={onDragOver} onDragLeave={() => setMarker(null)} onDrop={onDrop}>
               {!project.clips.length && (
-                <div className="tl-empty">Drop videos or photos here, or click “Import media”.</div>
+                <div className="tl-empty" dir="rtl">גררו לכאן סרטונים או תמונות, או לחצו על ״ייבוא מדיה״.</div>
               )}
               {layout.map((seg) => {
                 const { clip } = seg;
@@ -337,7 +337,7 @@ export function Timeline() {
                 const badges = [];
                 if (clip.speed !== 1 && clip.kind !== 'image') badges.push(`${clip.speed}×`);
                 if (clip.filter !== 'none') badges.push(PRESETS[clip.filter]?.label ?? clip.filter);
-                if (clip.kind === 'video' && (clip.muted || !clip.hasAudio)) badges.push('muted');
+                if (clip.kind === 'video' && (clip.muted || !clip.hasAudio)) badges.push('מושתק');
                 return (
                   <motion.div
                     key={clip.id}
@@ -376,7 +376,7 @@ export function Timeline() {
                   className={`tl-text${selection?.id === t.id ? ' selected' : ''}`}
                   style={{ left: t.start * pps, width: Math.max(6, (t.end - t.start) * pps), top: 4 + rowOf.get(t.id) * TEXT_ROW_H }}
                   onPointerDown={(e) => onTextDown(e, t)}>
-                  <span className="name">{t.text.split('\n')[0] || '(empty)'}</span>
+                  <span className="name">{t.text.split('\n')[0] || '(ריק)'}</span>
                   <div className="tl-handle left" data-handle="left" />
                   <div className="tl-handle right" data-handle="right" />
                 </div>
@@ -390,7 +390,7 @@ export function Timeline() {
                   <span className="name">♪ {m.name}</span>
                 </div>
               ) : (
-                <div className="tl-empty small">No music — use “Add music”.</div>
+                <div className="tl-empty small" dir="rtl">אין מוזיקה. לחצו על ״הוספת מוזיקה״.</div>
               )}
             </div>
 

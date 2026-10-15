@@ -91,7 +91,7 @@ test('text overlays and music are layered on top', () => {
 });
 
 test('empty timeline is rejected', () => {
-  assert.throws(() => buildExport(createProject(), opts), /empty/);
+  assert.throws(() => buildExport(createProject(), opts), /ריק/);
 });
 
 test('effects produce matching CSS and FFmpeg filters', () => {

@@ -43,7 +43,7 @@ function PlayButton() {
   const { playing } = player;
   return (
     <button id="btn-play" type="button" className="icon-btn play" onClick={() => player.toggle()}
-      title={playing ? 'Pause (Space)' : 'Play (Space)'} aria-label={playing ? 'Pause' : 'Play'}>
+      title={playing ? 'השהיה (רווח)' : 'ניגון (רווח)'} aria-label={playing ? 'השהיה' : 'ניגון'}>
       {/* Icon swap: quick scale + blur cross-fade so the change reads as one motion. */}
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.span
@@ -91,18 +91,18 @@ export function Preview() {
           {empty && (
             <motion.div className="empty-preview" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: enter }}
               exit={{ opacity: 0, transition: exit }}>
-              <strong>Start your video</strong>
-              <span>Click “Import media” or drop videos and photos anywhere in this window.</span>
+              <strong>בואו נתחיל סרטון</strong>
+              <span>לחצו על ״ייבוא מדיה״ או גררו סרטונים ותמונות לכל מקום בחלון.</span>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-      <div className="transport">
-        <IconButton id="btn-start" icon="start" label="Go to start (Home)" onClick={() => jump(0)} />
-        <IconButton id="btn-back" icon="back" label="Back 1 second" onClick={() => jump(player.time - 1)} />
+      <div className="transport" dir="ltr">
+        <IconButton id="btn-start" icon="start" label="להתחלה (Home)" onClick={() => jump(0)} />
+        <IconButton id="btn-back" icon="back" label="שנייה אחורה" onClick={() => jump(player.time - 1)} />
         <PlayButton />
-        <IconButton id="btn-fwd" icon="fwd" label="Forward 1 second" onClick={() => jump(player.time + 1)} />
-        <IconButton id="btn-end" icon="end" label="Go to end (End)" onClick={() => jump(player.duration)} />
+        <IconButton id="btn-fwd" icon="fwd" label="שנייה קדימה" onClick={() => jump(player.time + 1)} />
+        <IconButton id="btn-end" icon="end" label="לסוף (End)" onClick={() => jump(player.duration)} />
         <TimeDisplay />
       </div>
     </section>

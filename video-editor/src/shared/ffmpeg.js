@@ -40,7 +40,7 @@ export function textFadeDuration(text) {
 export function buildExport(project, opts) {
   const { width: W, height: H, fps = 30, crf = 20, preset = 'veryfast' } = opts;
   const clips = project.clips;
-  if (!clips.length) throw new Error('The timeline is empty.');
+  if (!clips.length) throw new Error('ציר הזמן ריק.');
 
   const inputs = [];
   const chains = [];

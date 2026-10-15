@@ -254,7 +254,8 @@ export class Player {
       ctx.fillStyle = '#e5484d';
       ctx.font = `${Math.round(H * 0.04)}px sans-serif`;
       ctx.textAlign = 'center';
-      ctx.fillText(`Media offline: ${clip.name}`, x + W / 2, H / 2);
+      ctx.direction = 'rtl';
+      ctx.fillText(`הקובץ לא נמצא: ${clip.name}`, x + W / 2, H / 2);
     }
     ctx.restore();
   }

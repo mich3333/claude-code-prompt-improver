@@ -91,11 +91,11 @@ function createWindow() {
     if (!dirty) return;
     const choice = dialog.showMessageBoxSync(win, {
       type: 'warning',
-      buttons: ['Quit without saving', 'Cancel'],
+      buttons: ['יציאה בלי לשמור', 'ביטול'],
       defaultId: 1,
       cancelId: 1,
-      message: 'You have unsaved changes.',
-      detail: 'Your edits will be lost if you quit now.',
+      message: 'יש שינויים שלא נשמרו.',
+      detail: 'אם תצאו עכשיו, העריכות יאבדו.',
     });
     if (choice === 1) e.preventDefault();
   });
@@ -111,38 +111,43 @@ function buildMenu() {
   const template = [
     ...(isMac ? [{ role: 'appMenu' }] : []),
     {
-      label: 'File',
+      label: 'קובץ',
       submenu: [
-        { label: 'New Project', accelerator: 'CmdOrCtrl+N', click: cmd('new') },
-        { label: 'Open Project…', accelerator: 'CmdOrCtrl+O', click: cmd('open') },
-        { label: 'Save Project', accelerator: 'CmdOrCtrl+S', click: cmd('save') },
-        { label: 'Save Project As…', accelerator: 'CmdOrCtrl+Shift+S', click: cmd('saveAs') },
+        { label: 'פרויקט חדש', accelerator: 'CmdOrCtrl+N', click: cmd('new') },
+        { label: 'פתיחת פרויקט…', accelerator: 'CmdOrCtrl+O', click: cmd('open') },
+        { label: 'שמירת פרויקט', accelerator: 'CmdOrCtrl+S', click: cmd('save') },
+        { label: 'שמירה בשם…', accelerator: 'CmdOrCtrl+Shift+S', click: cmd('saveAs') },
         { type: 'separator' },
-        { label: 'Import Media…', accelerator: 'CmdOrCtrl+I', click: cmd('import') },
-        { label: 'Add Music…', accelerator: 'CmdOrCtrl+M', click: cmd('music') },
+        { label: 'ייבוא מדיה…', accelerator: 'CmdOrCtrl+I', click: cmd('import') },
+        { label: 'הוספת מוזיקה…', accelerator: 'CmdOrCtrl+M', click: cmd('music') },
         { type: 'separator' },
-        { label: 'Export Video…', accelerator: 'CmdOrCtrl+E', click: cmd('export') },
+        { label: 'ייצוא סרטון…', accelerator: 'CmdOrCtrl+E', click: cmd('export') },
         { type: 'separator' },
         isMac ? { role: 'close' } : { role: 'quit' },
       ],
     },
     {
-      label: 'Edit',
+      label: 'עריכה',
       submenu: [
-        { label: 'Undo', accelerator: 'CmdOrCtrl+Z', click: cmd('undo') },
-        { label: 'Redo', accelerator: isMac ? 'Cmd+Shift+Z' : 'Ctrl+Y', click: cmd('redo') },
+        { label: 'ביטול פעולה', accelerator: 'CmdOrCtrl+Z', click: cmd('undo') },
+        { label: 'שחזור פעולה', accelerator: isMac ? 'Cmd+Shift+Z' : 'Ctrl+Y', click: cmd('redo') },
         { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
-        { role: 'selectAll' },
+        { role: 'cut', label: 'גזירה' },
+        { role: 'copy', label: 'העתקה' },
+        { role: 'paste', label: 'הדבקה' },
+        { role: 'selectAll', label: 'בחירת הכול' },
       ],
     },
     {
-      label: 'View',
-      submenu: [{ role: 'reload' }, { role: 'toggleDevTools' }, { type: 'separator' }, { role: 'togglefullscreen' }],
+      label: 'תצוגה',
+      submenu: [
+        { role: 'reload', label: 'רענון' },
+        { role: 'toggleDevTools', label: 'כלי מפתחים' },
+        { type: 'separator' },
+        { role: 'togglefullscreen', label: 'מסך מלא' },
+      ],
     },
-    { role: 'help', submenu: [{ label: 'Keyboard Shortcuts', click: cmd('shortcuts') }] },
+    { role: 'help', label: 'עזרה', submenu: [{ label: 'קיצורי מקלדת', click: cmd('shortcuts') }] },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
@@ -164,13 +169,13 @@ async function probeAll(paths) {
 ipcMain.handle('media:import', async (_e, kind) => {
   const filters =
     kind === 'music'
-      ? [{ name: 'Audio', extensions: AUDIO_EXT }]
+      ? [{ name: 'קובצי שמע', extensions: AUDIO_EXT }]
       : [
-          { name: 'Videos and images', extensions: [...VIDEO_EXT, ...IMAGE_EXT] },
-          { name: 'All files', extensions: ['*'] },
+          { name: 'סרטונים ותמונות', extensions: [...VIDEO_EXT, ...IMAGE_EXT] },
+          { name: 'כל הקבצים', extensions: ['*'] },
         ];
   const res = await dialog.showOpenDialog(win, {
-    title: kind === 'music' ? 'Add music' : 'Import media',
+    title: kind === 'music' ? 'הוספת מוזיקה' : 'ייבוא מדיה',
     properties: kind === 'music' ? ['openFile'] : ['openFile', 'multiSelections'],
     filters,
   });
@@ -184,9 +189,9 @@ ipcMain.handle('project:save', async (_e, { json, filePath, saveAs }) => {
   let target = saveAs ? null : filePath;
   if (!target) {
     const res = await dialog.showSaveDialog(win, {
-      title: 'Save project',
-      defaultPath: filePath || `My video.${PROJECT_EXT}`,
-      filters: [{ name: 'ClipCraft project', extensions: [PROJECT_EXT] }],
+      title: 'שמירת פרויקט',
+      defaultPath: filePath || `הסרטון שלי.${PROJECT_EXT}`,
+      filters: [{ name: 'פרויקט ClipCraft', extensions: [PROJECT_EXT] }],
     });
     if (res.canceled || !res.filePath) return null;
     target = res.filePath;
@@ -197,9 +202,9 @@ ipcMain.handle('project:save', async (_e, { json, filePath, saveAs }) => {
 
 ipcMain.handle('project:open', async () => {
   const res = await dialog.showOpenDialog(win, {
-    title: 'Open project',
+    title: 'פתיחת פרויקט',
     properties: ['openFile'],
-    filters: [{ name: 'ClipCraft project', extensions: [PROJECT_EXT] }],
+    filters: [{ name: 'פרויקט ClipCraft', extensions: [PROJECT_EXT] }],
   });
   if (res.canceled || !res.filePaths.length) return null;
   const filePath = res.filePaths[0];
@@ -220,15 +225,15 @@ ipcMain.handle('project:dirty', (_e, value) => {
 
 ipcMain.handle('export:choose', async (_e, defaultName) => {
   const res = await dialog.showSaveDialog(win, {
-    title: 'Export video',
-    defaultPath: path.join(app.getPath('videos'), defaultName || 'My video.mp4'),
-    filters: [{ name: 'MP4 video', extensions: ['mp4'] }],
+    title: 'ייצוא סרטון',
+    defaultPath: path.join(app.getPath('videos'), defaultName || 'הסרטון שלי.mp4'),
+    filters: [{ name: 'סרטון MP4', extensions: ['mp4'] }],
   });
   return res.canceled ? null : res.filePath;
 });
 
 ipcMain.handle('export:start', async (_e, { project, opts, texts }) => {
-  if (exportJob) throw new Error('An export is already running.');
+  if (exportJob) throw new Error('ייצוא אחר כבר רץ.');
   const controller = new AbortController();
   exportJob = controller;
   const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'clipcraft-'));

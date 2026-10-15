@@ -2,22 +2,22 @@
 // UI) and the main process (export). Pure functions only.
 
 export const ASPECTS = {
-  '16:9': { label: 'Landscape 16:9', w: 16, h: 9 },
-  '9:16': { label: 'Vertical 9:16', w: 9, h: 16 },
-  '1:1': { label: 'Square 1:1', w: 1, h: 1 },
-  '4:5': { label: 'Portrait 4:5', w: 4, h: 5 },
+  '16:9': { label: 'רוחבי 16:9', w: 16, h: 9 },
+  '9:16': { label: 'אנכי 9:16', w: 9, h: 16 },
+  '1:1': { label: 'ריבוע 1:1', w: 1, h: 1 },
+  '4:5': { label: 'דיוקן 4:5', w: 4, h: 5 },
 };
 
 export const TRANSITIONS = {
-  none: 'Cut',
-  fade: 'Crossfade',
-  fadeblack: 'Fade through black',
-  fadewhite: 'Fade through white',
-  wipeleft: 'Wipe left',
-  wiperight: 'Wipe right',
-  slideleft: 'Slide left',
-  slideright: 'Slide right',
-  circleopen: 'Circle open',
+  none: 'חיתוך ישיר',
+  fade: 'מעבר הדרגתי',
+  fadeblack: 'דעיכה דרך שחור',
+  fadewhite: 'דעיכה דרך לבן',
+  wipeleft: 'ניגוב שמאלה',
+  wiperight: 'ניגוב ימינה',
+  slideleft: 'החלקה שמאלה',
+  slideright: 'החלקה ימינה',
+  circleopen: 'עיגול נפתח',
 };
 
 export const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4];
@@ -82,7 +82,7 @@ export function createClip(media) {
 export function createText(start, end) {
   return {
     id: newId('text'),
-    text: 'Your text',
+    text: 'הטקסט שלך',
     start,
     end,
     x: 0.5,

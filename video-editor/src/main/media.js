@@ -40,10 +40,10 @@ function run(bin, args, { onStdout, signal } = {}) {
     });
     const abort = () => proc.kill('SIGKILL');
     signal?.addEventListener('abort', abort, { once: true });
-    proc.on('error', (e) => reject(new Error(`Could not start ${path.basename(bin)}: ${e.message}`)));
+    proc.on('error', (e) => reject(new Error(`לא ניתן להפעיל את ${path.basename(bin)}: ${e.message}`)));
     proc.on('close', (code) => {
       signal?.removeEventListener('abort', abort);
-      if (signal?.aborted) return reject(Object.assign(new Error('Export cancelled'), { cancelled: true }));
+      if (signal?.aborted) return reject(Object.assign(new Error('הייצוא בוטל'), { cancelled: true }));
       if (code === 0) return resolve(Buffer.concat(out));
       const lines = err.trim().split('\n').slice(-8).join('\n');
       reject(new Error(`${path.basename(bin)} failed (code ${code}):\n${lines}`));
@@ -83,8 +83,8 @@ export async function probe(file) {
   let kind = 'video';
   if (isImage) kind = 'image';
   else if (!video || video.disposition?.attached_pic) kind = 'audio';
-  if (kind !== 'audio' && !video) throw new Error('No video or image stream found.');
-  if (kind !== 'image' && !(duration > 0)) throw new Error('Could not read the media duration.');
+  if (kind !== 'audio' && !video) throw new Error('לא נמצא וידאו או תמונה בקובץ.');
+  if (kind !== 'image' && !(duration > 0)) throw new Error('לא ניתן לקרוא את אורך הקובץ.');
   const rotated = Math.abs(Number(video?.side_data_list?.find((d) => d.rotation != null)?.rotation ?? video?.tags?.rotate ?? 0)) % 180 === 90;
   return {
     path: file,

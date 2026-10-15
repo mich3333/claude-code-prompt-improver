@@ -12,11 +12,11 @@ export function MediaBin() {
   return (
     <aside className="bin panel">
       <div className="panel-head">
-        <h2>Media</h2>
-        <IconButton id="btn-bin-import" icon="plus" label="Import media" onClick={actions.importMedia} />
+        <h2>מדיה</h2>
+        <IconButton id="btn-bin-import" icon="plus" label="ייבוא מדיה" onClick={actions.importMedia} />
       </div>
       <div id="bin-list" className="bin-list">
-        {!media.length && <div className="bin-empty">Imported videos, photos and music appear here.</div>}
+        {!media.length && <div className="bin-empty">סרטונים, תמונות ומוזיקה שתייבאו יופיעו כאן.</div>}
         {/* Imports are occasional, so new items get a short entrance; existing ones never animate. */}
         <AnimatePresence initial={false}>
           {media.map((m) => (
@@ -40,11 +40,11 @@ export function MediaBin() {
               <div className="bin-meta">
                 <div className="bin-name" dir="auto">{m.name}</div>
                 <div className="bin-sub">
-                  {m.kind === 'image' ? 'Photo' : `${m.kind === 'audio' ? 'Audio' : 'Video'} · ${formatTime(m.duration)}`}
+                  {m.kind === 'image' ? 'תמונה' : `${m.kind === 'audio' ? 'שמע' : 'וידאו'} · ${formatTime(m.duration)}`}
                 </div>
               </div>
               <IconButton icon={m.kind === 'audio' ? 'music' : 'plus'} size={16}
-                label={m.kind === 'audio' ? 'Use as music' : 'Add to end of timeline'}
+                label={m.kind === 'audio' ? 'שימוש כמוזיקת רקע' : 'הוספה לסוף ציר הזמן'}
                 onClick={() => addMediaToTimeline(m)} />
             </motion.div>
           ))}

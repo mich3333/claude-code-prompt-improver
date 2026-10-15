@@ -1,6 +1,6 @@
 # ClipCraft — desktop video editor
 
-A desktop video editor (Electron + React + Motion, with FFmpeg for export) for putting together a video from your clips and photos, with text, music, color filters, transitions and speed changes. FFmpeg is bundled, so there's nothing else to install.
+A desktop video editor (Electron + React + Motion, with FFmpeg for export) with a Hebrew, right-to-left interface, for putting together a video from your clips and photos, with text, music, color filters, transitions and speed changes. FFmpeg is bundled, so there's nothing else to install.
 
 ## Features
 
@@ -37,11 +37,13 @@ This builds for the OS you run it on: `.dmg` on macOS, an `.exe` installer on Wi
 
 ## How to make a video
 
-1. **Import media**: click it or drop files into the window. Clips are added to the timeline in order.
-2. Click a clip on the timeline to edit it in the right panel: trim, speed, color, volume, and the transition from the previous clip.
-3. **Add text** puts a title at the playhead. Type it in the right panel and drag it on the preview to move it.
-4. **Add music** sets the background track. Click the green bar to change volume, start point and fades.
-5. Pick the **Frame** size (top right), then **Export**.
+1. **ייבוא מדיה** (Import media): click it or drop files into the window. Clips are added to the timeline in order.
+2. Click a clip on the timeline to edit it in the settings panel (on the left): trim, speed, color, volume, and the transition from the previous clip.
+3. **הוספת טקסט** (Add text) puts a title at the playhead. Type it in the settings panel and drag it on the preview to move it.
+4. **הוספת מוזיקה** (Add music) sets the background track. Click the green bar to change volume, start point and fades.
+5. Pick the **מסגרת** (Frame) size at the top, then **ייצוא** (Export).
+
+The interface is in Hebrew and laid out right to left. The timeline and the playback controls stay left to right, because time runs that way in every video editor. Keyboard shortcuts use physical keys, so they work on a Hebrew keyboard layout too.
 
 ### Keyboard shortcuts
 
@@ -107,7 +109,7 @@ test/                   unit, export and UI tests
 
 1. התקינו [Node.js](https://nodejs.org) (גרסה 18 ומעלה).
 2. בטרמינל: `cd video-editor`, אחר כך `npm install`, ואז `npm start`. לפיתוח עם רענון אוטומטי: `npm run dev`.
-3. לחצו **Import media** (או גררו קבצים לחלון), ערכו על ציר הזמן, הוסיפו טקסט (**Add text**) ומוזיקה (**Add music**).
-4. בחרו גודל מסגרת (**Frame**) ולחצו **Export** כדי לשמור את הסרטון כ-MP4.
+3. לחצו על **ייבוא מדיה** (או גררו קבצים לחלון), ערכו על ציר הזמן, והוסיפו טקסט (**הוספת טקסט**) ומוזיקה (**הוספת מוזיקה**).
+4. בחרו גודל **מסגרת** ולחצו על **ייצוא** כדי לשמור את הסרטון כ-MP4.
 
 ליצירת קובץ התקנה למחשב שלכם: `npm run dist`.

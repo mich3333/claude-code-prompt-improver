@@ -39,6 +39,8 @@ test('edit and export a video through the UI', { skip: noDisplay && 'no display 
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
     await page.waitForSelector('#btn-import');
+    assert.equal(await page.getAttribute('html', 'dir'), 'rtl');
+    assert.equal((await page.textContent('#btn-import')).trim(), 'ייבוא מדיה');
     const mockOpen = (files) => app.evaluate(({ dialog }, f) => {
       dialog.showOpenDialog = async () => ({ canceled: false, filePaths: f });
     }, files);
@@ -119,10 +121,10 @@ test('edit and export a video through the UI', { skip: noDisplay && 'no display 
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: out });
     }, output);
     await page.click('#btn-export');
-    await page.selectOption('.modal-field:has-text("Resolution") select', '720');
+    await page.selectOption('.modal-field:has-text("רזולוציה") select', '720');
     await shot('04-export-dialog');
     await page.click('#export-go');
-    await page.waitForSelector('.modal h2:has-text("Export complete")', { timeout: 180000 });
+    await page.waitForSelector('.modal h2:has-text("הייצוא הסתיים")', { timeout: 180000 });
     await shot('05-export-done');
 
     const expected = await page.evaluate(() => window.clipcraft.player.duration);

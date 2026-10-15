@@ -16,7 +16,7 @@ import { Toaster } from './Toaster.jsx';
 
 function Toolbar() {
   useStore();
-  const name = store.filePath ? store.filePath.split(/[\\/]/).pop().replace(/\.clipcraft$/i, '') : 'Untitled';
+  const name = store.filePath ? store.filePath.split(/[\\/]/).pop().replace(/\.clipcraft$/i, '') : 'ללא שם';
   const label = `${name}${store.dirty ? ' •' : ''}`;
   useEffect(() => {
     document.title = `${label} — ClipCraft`;
@@ -28,23 +28,23 @@ function Toolbar() {
         <span className="logo">▶</span> ClipCraft <span id="project-name" className="project-name">{label}</span>
       </div>
       <div className="tool-group">
-        <Button id="btn-import" icon="film" onClick={actions.importMedia} title="Import videos and photos (Ctrl+I)">Import media</Button>
-        <Button id="btn-text" icon="text" onClick={actions.addText} title="Add text at playhead (T)">Add text</Button>
-        <Button id="btn-music" icon="music" onClick={actions.addMusic} title="Add background music (Ctrl+M)">Add music</Button>
+        <Button id="btn-import" icon="film" onClick={actions.importMedia} title="ייבוא סרטונים ותמונות (Ctrl+I)">ייבוא מדיה</Button>
+        <Button id="btn-text" icon="text" onClick={actions.addText} title="הוספת טקסט בסמן הניגון (T)">הוספת טקסט</Button>
+        <Button id="btn-music" icon="music" onClick={actions.addMusic} title="הוספת מוזיקת רקע (Ctrl+M)">הוספת מוזיקה</Button>
       </div>
       <div className="tool-group">
-        <IconButton id="btn-undo" icon="undo" label="Undo (Ctrl+Z)" disabled={!canUndo} onClick={() => store.undo()} />
-        <IconButton id="btn-redo" icon="redo" label="Redo (Ctrl+Y)" disabled={!store.future.length} onClick={() => store.redo()} />
+        <IconButton id="btn-undo" icon="undo" label="ביטול (Ctrl+Z)" disabled={!canUndo} onClick={() => store.undo()} />
+        <IconButton id="btn-redo" icon="redo" label="שחזור (Ctrl+Y)" disabled={!store.future.length} onClick={() => store.redo()} />
       </div>
       <div className="spacer" />
-      <label className="aspect-picker" title="Frame size">
-        <span>Frame</span>
+      <label className="aspect-picker" title="גודל מסגרת">
+        <span>מסגרת</span>
         <select id="aspect" value={store.project.aspect} onChange={(e) => store.update((p) => { p.aspect = e.target.value; })}>
           {Object.entries(ASPECTS).map(([k, a]) => <option key={k} value={k}>{a.label}</option>)}
         </select>
       </label>
       <Button id="btn-export" variant="primary" icon="export" disabled={!store.project.clips.length}
-        onClick={actions.export} title="Export video (Ctrl+E)">Export</Button>
+        onClick={actions.export} title="ייצוא סרטון (Ctrl+E)">ייצוא</Button>
     </header>
   );
 }
@@ -56,7 +56,7 @@ function DropOverlay() {
       {active && (
         <motion.div className="drop-overlay" initial={{ opacity: 0, scale: 0.985 }}
           animate={{ opacity: 1, scale: 1, transition: enter }} exit={{ opacity: 0, transition: exit }}>
-          Drop to import
+          שחררו כדי לייבא
         </motion.div>
       )}
     </AnimatePresence>
@@ -79,17 +79,18 @@ function useGlobalHandlers() {
         player.pause();
         player.seek(t);
       };
-      switch (e.key) {
-        case ' ': e.preventDefault(); player.toggle(); break;
-        case 's': case 'S': actions.split(); break;
-        case 't': case 'T': e.preventDefault(); actions.addText(); break;
+      // Match physical keys (e.code), so S/T still work on a Hebrew keyboard layout.
+      switch (e.code) {
+        case 'Space': e.preventDefault(); player.toggle(); break;
+        case 'KeyS': actions.split(); break;
+        case 'KeyT': e.preventDefault(); actions.addText(); break;
         case 'Delete': case 'Backspace': actions.remove(); break;
         case 'ArrowLeft': seek(player.time - step); break;
         case 'ArrowRight': seek(player.time + step); break;
         case 'Home': seek(0); break;
         case 'End': seek(player.duration); break;
-        case '+': case '=': timelineApi.zoomBy?.(1.25); break;
-        case '-': timelineApi.zoomBy?.(1 / 1.25); break;
+        case 'Equal': case 'NumpadAdd': timelineApi.zoomBy?.(1.25); break;
+        case 'Minus': case 'NumpadSubtract': timelineApi.zoomBy?.(1 / 1.25); break;
         default:
       }
     };

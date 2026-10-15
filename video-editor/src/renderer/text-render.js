@@ -6,14 +6,14 @@
 import { textDirection } from '../shared/timeline.js';
 
 export const FONTS = {
-  sans: { label: 'Sans', css: 'Arial, "Helvetica Neue", Helvetica, sans-serif' },
-  serif: { label: 'Serif', css: 'Georgia, "Times New Roman", serif' },
-  display: { label: 'Impact', css: 'Impact, "Arial Black", "Helvetica Neue", sans-serif' },
-  rounded: { label: 'Rounded', css: '"Trebuchet MS", "Segoe UI", Verdana, sans-serif' },
-  mono: { label: 'Mono', css: '"Courier New", Consolas, monospace' },
+  sans: { label: 'רגיל', css: 'Arial, "Helvetica Neue", Helvetica, sans-serif' },
+  serif: { label: 'קלאסי', css: 'Georgia, "Times New Roman", serif' },
+  display: { label: 'בולט', css: 'Impact, "Arial Black", "Helvetica Neue", sans-serif' },
+  rounded: { label: 'מעוגל', css: '"Trebuchet MS", "Segoe UI", Verdana, sans-serif' },
+  mono: { label: 'מכונת כתיבה', css: '"Courier New", Consolas, monospace' },
 };
 
-export const TEXT_STYLES = { none: 'Plain', shadow: 'Shadow', outline: 'Outline', box: 'Box' };
+export const TEXT_STYLES = { none: 'רגיל', shadow: 'צל', outline: 'קו מתאר', box: 'רקע' };
 
 // Size is a fraction of the frame's shorter side, so text fits in any aspect.
 function fontFor(text, W, H) {

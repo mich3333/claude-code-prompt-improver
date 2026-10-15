@@ -4,14 +4,14 @@
 // looks the same as the preview.
 
 export const PRESETS = {
-  none: { label: 'None', ops: [] },
-  bw: { label: 'Black & White', ops: [['grayscale', 1]] },
-  sepia: { label: 'Sepia', ops: [['sepia', 1]] },
-  vintage: { label: 'Vintage', ops: [['sepia', 0.45], ['contrast', 1.1], ['saturate', 0.85], ['brightness', 1.05]] },
-  vivid: { label: 'Vivid', ops: [['saturate', 1.6], ['contrast', 1.12]] },
-  dramatic: { label: 'Dramatic', ops: [['contrast', 1.4], ['saturate', 0.7], ['brightness', 0.95]] },
-  faded: { label: 'Faded', ops: [['contrast', 0.85], ['brightness', 1.1], ['saturate', 0.8]] },
-  cool: { label: 'Cool', ops: [['hue-rotate', 12], ['saturate', 1.1]] },
+  none: { label: 'ללא', ops: [] },
+  bw: { label: 'שחור-לבן', ops: [['grayscale', 1]] },
+  sepia: { label: 'ספיה', ops: [['sepia', 1]] },
+  vintage: { label: 'וינטג׳', ops: [['sepia', 0.45], ['contrast', 1.1], ['saturate', 0.85], ['brightness', 1.05]] },
+  vivid: { label: 'חי', ops: [['saturate', 1.6], ['contrast', 1.12]] },
+  dramatic: { label: 'דרמטי', ops: [['contrast', 1.4], ['saturate', 0.7], ['brightness', 0.95]] },
+  faded: { label: 'דהוי', ops: [['contrast', 0.85], ['brightness', 1.1], ['saturate', 0.8]] },
+  cool: { label: 'קריר', ops: [['hue-rotate', 12], ['saturate', 1.1]] },
 };
 
 // Ops for a clip: its preset, then the manual adjustments

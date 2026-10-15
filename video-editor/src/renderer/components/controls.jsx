@@ -66,7 +66,7 @@ export function Segmented({ options, value, onChange, layout = '' }) {
 }
 
 // Number input that keeps a draft while typing and applies on Enter/blur.
-export function NumberField({ label, value, onApply, min = 0, max = Infinity, step = 0.1, suffix = 's' }) {
+export function NumberField({ label, value, onApply, min = 0, max = Infinity, step = 0.1, suffix = 'שנ׳' }) {
   const [draft, setDraft] = useState(null);
   const apply = () => {
     if (draft === null) return;

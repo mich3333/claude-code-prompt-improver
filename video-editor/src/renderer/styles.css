@@ -30,7 +30,7 @@ html, body {
   height: 100%;
   background: var(--bg);
   color: var(--text);
-  font: 13px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font: 13px/1.45 system-ui, -apple-system, "Segoe UI", "Arial Hebrew", "Noto Sans Hebrew", Roboto, Arial, sans-serif;
   user-select: none;
   overflow: hidden;
 }
@@ -126,8 +126,8 @@ input, select, textarea { font: inherit; color: var(--text); }
   display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 7px;
   background: linear-gradient(135deg, #4f8cff, #8a4fd1); font-size: 12px; color: #fff;
 }
-.project-name { font-weight: 400; color: var(--muted); font-size: 13px; margin-left: 6px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tool-group { display: flex; gap: 6px; padding-left: 14px; border-left: 1px solid var(--line); }
+.project-name { font-weight: 400; color: var(--muted); font-size: 13px; margin-inline-start: 6px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tool-group { display: flex; gap: 6px; padding-inline-start: 14px; border-inline-start: 1px solid var(--line); }
 .spacer { flex: 1; }
 .aspect-picker { display: flex; align-items: center; gap: 8px; color: var(--muted); }
 select {
@@ -146,10 +146,10 @@ select {
   min-height: 0;
 }
 .panel { background: var(--panel); min-height: 0; overflow: auto; }
-.panel-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 6px 14px; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; padding-block: 10px 6px; padding-inline: 14px 10px; }
 .panel-head h2 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 
-.bin { border-right: 1px solid var(--line); }
+.bin { border-inline-end: 1px solid var(--line); }
 .bin-list { display: flex; flex-direction: column; gap: 6px; padding: 4px 10px 12px; }
 .bin-empty { color: var(--muted); padding: 12px 4px; }
 .bin-item {
@@ -195,11 +195,15 @@ select {
 .transport { display: flex; align-items: center; justify-content: center; gap: 4px; }
 .transport .play { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: #fff; }
 .icon-swap { display: inline-grid; place-items: center; }
+/* Undo/redo arrows point "back"/"forward", which flips in a right-to-left UI. */
+[dir="rtl"] #btn-undo .icon, [dir="rtl"] #btn-redo .icon { transform: scaleX(-1); }
+/* Numbers and times read left-to-right even inside Hebrew text. */
+.insp input[type="number"], .time, .insp-value, .insp-suffix { direction: ltr; unicode-bidi: isolate; }
 .time { margin-left: 12px; font-variant-numeric: tabular-nums; color: var(--muted); min-width: 140px; }
 
 /* ---------- inspector ---------- */
 
-.inspector { border-left: 1px solid var(--line); }
+.inspector { border-inline-start: 1px solid var(--line); }
 .insp { padding: 12px 14px 24px; display: flex; flex-direction: column; gap: 4px; }
 .insp-title { display: flex; flex-direction: column; gap: 2px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
 .insp-title strong { font-size: 14px; overflow-wrap: anywhere; }
@@ -208,7 +212,7 @@ select {
 .insp-section h3 { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 .insp-row { display: grid; grid-template-columns: 96px 1fr auto; align-items: center; gap: 8px; }
 .insp-label { color: var(--muted); }
-.insp-value, .insp-suffix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 38px; text-align: right; }
+.insp-value, .insp-suffix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 38px; text-align: end; }
 .insp-note { color: var(--muted); font-size: 12px; }
 .insp-note:empty { display: none; }
 .insp-check { display: flex; align-items: center; gap: 8px; cursor: pointer; }
@@ -340,7 +344,7 @@ kbd {
 .progress-label { color: var(--muted); font-variant-numeric: tabular-nums; }
 
 .toasts {
-  position: fixed; right: 16px; bottom: 286px; display: flex; flex-direction: column; gap: 8px; z-index: 60;
+  position: fixed; inset-inline-end: 16px; bottom: 286px; display: flex; flex-direction: column; gap: 8px; z-index: 60;
   width: min(380px, calc(100vw - 32px)); margin: 0; padding: 0; list-style: none;
 }
 .toast {

@@ -7,7 +7,7 @@ import { isTyping, player, store, timelineApi, ui } from './state.js';
 import { toast } from './toast.js';
 
 function reportErrors(errors) {
-  if (errors?.length) toast(`Could not import: ${errors.join('; ')}`, 'error', 9000);
+  if (errors?.length) toast(`לא ניתן לייבא: ${errors.join('; ')}`, 'error', 9000);
 }
 
 // Imported files go to the media bin; videos/photos are also added to the
@@ -82,7 +82,7 @@ export const actions = {
   split() {
     const clips = splitClipAt(store.project.clips, player.time);
     if (!clips) {
-      toast('Put the playhead inside a clip (not at its edge) to split it.', 'warn');
+      toast('כדי לפצל, הציבו את סמן הניגון בתוך קליפ (לא בקצה שלו).', 'warn');
       return;
     }
     store.update((p) => { p.clips = clips; });
@@ -131,7 +131,7 @@ export const actions = {
   },
 
   confirmDiscard() {
-    return !store.dirty || window.confirm('Discard unsaved changes?');
+    return !store.dirty || window.confirm('יש שינויים שלא נשמרו. להמשיך בלי לשמור?');
   },
 
   newProject() {
@@ -150,7 +150,7 @@ export const actions = {
     player.seek(0);
     timelineApi.zoomToFit();
     if (res.missing.length) {
-      toast(`Missing media (moved or deleted): ${res.missing.map((p) => p.split(/[\\/]/).pop()).join(', ')}`, 'error', 9000);
+      toast(`קבצים חסרים (הועברו או נמחקו): ${res.missing.map((p) => p.split(/[\\/]/).pop()).join(', ')}`, 'error', 9000);
     }
   },
 
@@ -163,13 +163,13 @@ export const actions = {
     });
     if (filePath) {
       store.markSaved(filePath);
-      toast('Project saved', 'success', 2500);
+      toast('הפרויקט נשמר', 'success', 2500);
     }
   },
 
   export() {
     if (!store.project.clips.length) {
-      toast('Add at least one video or photo before exporting.', 'warn');
+      toast('הוסיפו לפחות סרטון או תמונה אחת לפני הייצוא.', 'warn');
       return;
     }
     player.pause();
