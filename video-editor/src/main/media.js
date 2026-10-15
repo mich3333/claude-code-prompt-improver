@@ -59,7 +59,8 @@ export function mediaKind(file) {
 async function thumbnail(file, seek) {
   try {
     const buf = await run(ffmpegPath(), [
-      '-v', 'error', '-ss', String(seek), '-i', file, '-frames:v', '1',
+      // Seeking (even to 0) makes FFmpeg return nothing for still images.
+      '-v', 'error', ...(seek > 0 ? ['-ss', String(seek)] : []), '-i', file, '-frames:v', '1',
       '-vf', 'scale=192:-2', '-f', 'image2pipe', '-c:v', 'mjpeg', '-q:v', '5', 'pipe:1',
     ]);
     return buf.length ? `data:image/jpeg;base64,${buf.toString('base64')}` : null;

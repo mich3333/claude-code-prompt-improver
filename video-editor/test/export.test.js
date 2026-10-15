@@ -18,9 +18,9 @@ function makeMedia(dir) {
   ff(['-f', 'lavfi', '-i', 'testsrc2=s=640x360:r=30:d=5', '-f', 'lavfi', '-i', 'sine=f=440:d=5',
     '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', p('landscape.mp4')]);
   ff(['-f', 'lavfi', '-i', 'testsrc=s=360x640:r=25:d=4', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', p('portrait-silent.mp4')]);
-  ff(['-f', 'lavfi', '-i', 'color=c=orange:s=400x300', '-frames:v', '1', p('photo.png')]);
+  ff(['-f', 'lavfi', '-i', 'gradients=s=400x300:seed=7', '-frames:v', '1', p('photo.jpg')]);
   ff(['-f', 'lavfi', '-i', 'sine=f=220:d=3', '-c:a', 'libmp3lame', p('music.mp3')]);
-  return { landscape: p('landscape.mp4'), portrait: p('portrait-silent.mp4'), photo: p('photo.png'), music: p('music.mp3') };
+  return { landscape: p('landscape.mp4'), portrait: p('portrait-silent.mp4'), photo: p('photo.jpg'), music: p('music.mp3') };
 }
 
 function textPng(dir, w, h) {
@@ -48,6 +48,7 @@ test('exports a project using trims, speed, filters, transitions, text and music
     assert.equal(img.kind, 'image');
     assert.equal(song.kind, 'audio');
     assert.ok(a.thumbnail?.startsWith('data:image/jpeg;base64,'));
+    assert.ok(img.thumbnail?.startsWith('data:image/jpeg;base64,'), 'photos get a thumbnail too');
 
     const project = createProject();
     project.aspect = '9:16';
