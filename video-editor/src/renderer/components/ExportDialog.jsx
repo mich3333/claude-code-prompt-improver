@@ -75,7 +75,10 @@ function DialogBody({ close, setBusy }) {
       const texts = [];
       for (const t of project.texts) {
         if (!t.text?.trim() || !(t.end > t.start)) continue;
-        texts.push({ png: await renderTextPng(t, width, height), start: t.start, end: t.end, fade: textFadeDuration(t) });
+        texts.push({
+          png: await renderTextPng(t, width, height), start: t.start, end: t.end,
+          fade: textFadeDuration(t), rise: t.animation === 'rise',
+        });
       }
       setPhase((ph) => ({ ...ph, label: 'מייצא…' }));
       result = await window.api.startExport({

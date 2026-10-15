@@ -7,6 +7,7 @@ const CSP = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: media:",
   "media-src 'self' media:",
+  "font-src 'self' data:",
 ].join('; ');
 
 export default defineConfig({

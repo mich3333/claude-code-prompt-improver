@@ -3,6 +3,7 @@
 import {
   createClip, createMusic, createProject, createText, layoutClips, newId, splitClipAt, totalDuration,
 } from '../shared/timeline.js';
+import { applyTemplate, TEMPLATES } from '../shared/templates.js';
 import { isTyping, player, store, timelineApi, ui } from './state.js';
 import { toast } from './toast.js';
 
@@ -49,6 +50,22 @@ export function addMediaToTimeline(media, index = store.project.clips.length) {
 }
 
 export const actions = {
+  applyTemplate(id) {
+    player.pause();
+    const wasEmpty = !store.project.clips.length;
+    const { project, select, seek } = applyTemplate(store.project, id, player.time);
+    store.update((p) => {
+      p.clips = project.clips;
+      p.texts = project.texts;
+      p.music = project.music;
+    });
+    if (select) store.select(select);
+    if (seek != null) player.seek(seek);
+    if (wasEmpty) requestAnimationFrame(() => timelineApi.zoomToFit());
+    const name = TEMPLATES.find((t) => t.id === id)?.name;
+    toast(select ? `${name} נוסף. אפשר לערוך את הטקסט בפאנל ההגדרות.` : `${name} הוחל.`, 'success', 3000);
+  },
+
   async importMedia() {
     addMediaItems(await window.api.importMedia('clips'));
   },

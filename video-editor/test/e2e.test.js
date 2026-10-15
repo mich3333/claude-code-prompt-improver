@@ -104,6 +104,18 @@ test('edit and export a video through the UI', { skip: noDisplay && 'no display 
     assert.equal(proj.texts[0].text, 'שלום! My summer');
     await shot('02-editing');
 
+    // Claude-style templates: an intro card and a lower third.
+    const clipsBefore = (await project()).clips.length;
+    await page.click('.bin .segmented button[data-value="templates"]');
+    await page.click('.tpl-card[data-template="intro"]');
+    await page.click('.tpl-card[data-template="lower-third"]');
+    proj = await project();
+    assert.equal(proj.clips.length, clipsBefore + 1);
+    assert.equal(proj.clips[0].kind, 'card');
+    assert.equal(proj.texts.filter((t) => t.animation === 'rise').length, 3);
+    await page.waitForTimeout(400);
+    await shot('02b-templates');
+
     // Switch to vertical and play for a moment.
     await page.selectOption('#aspect', '9:16');
     await page.keyboard.press('Escape');

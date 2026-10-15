@@ -59,6 +59,20 @@ The interface is in Hebrew and laid out right to left. The timeline and the play
 | Ctrl+S, Ctrl+O, Ctrl+I, Ctrl+M, Ctrl+E | Save, open, import, music, export |
 | Ctrl + mouse wheel | Zoom timeline |
 
+## Claude-style templates
+
+The **תבניות** (Templates) tab next to the media library adds ready-made pieces in a Claude-inspired style: warm cream and charcoal backgrounds, a terracotta accent, an editorial serif (Frank Ruhl Libre) with Rubik for supporting text, and calm motion. Titles rise gently into place, and scenes dissolve into each other. The style is imitated only; no logos or brand marks are included.
+
+| Template | What it adds |
+| --- | --- |
+| פתיח בהיר / פתיח כהה (light / dark intro) | A cream or charcoal title card at the start, with a title and a subtitle that arrive one after the other |
+| ציטוט (quote) | A terracotta card with a quote, after the clip under the playhead |
+| כותרת תחתונה (lower third) | A "name · role" label over the video at the playhead |
+| סיום (outro) | A "thanks for watching" card at the end |
+| צבע חם (warm grade) | A soft, warm colour grade on every video and photo |
+
+Inserting a card moves the texts and music that come after it, so they stay in sync with their clips. Templates are a single undo step. The fonts ship with the app, so text looks the same on every computer and in the exported video.
+
 ## Motion and interaction design
 
 The UI follows Emil Kowalski's design-engineering guidelines. The tokens live in `src/renderer/motion.js` and `styles.css`.
@@ -86,6 +100,7 @@ main.js                 Electron main process: window, menus, dialogs, export jo
 preload.cjs             safe bridge exposed to the UI as window.api
 vite.config.js          builds the React UI into build/renderer (scripts/dev.mjs runs it with hot reload)
 src/shared/             pure logic shared by UI and export
+  templates.js          the Claude-style templates (palette, cards, texts)
   timeline.js           project model, layout, transitions, split
   effects.js            color presets → CSS filters (preview) and FFmpeg filters (export)
   ffmpeg.js             builds the FFmpeg filter graph for a project
@@ -110,6 +125,7 @@ test/                   unit, export and UI tests
 1. התקינו [Node.js](https://nodejs.org) (גרסה 18 ומעלה).
 2. בטרמינל: `cd video-editor`, אחר כך `npm install`, ואז `npm start`. לפיתוח עם רענון אוטומטי: `npm run dev`.
 3. לחצו על **ייבוא מדיה** (או גררו קבצים לחלון), ערכו על ציר הזמן, והוסיפו טקסט (**הוספת טקסט**) ומוזיקה (**הוספת מוזיקה**).
+   בלשונית **תבניות** יש פתיח, ציטוט, כותרת תחתונה, סיום וצבע חם בסגנון Claude. לחיצה אחת מוסיפה אותם.
 4. בחרו גודל **מסגרת** ולחצו על **ייצוא** כדי לשמור את הסרטון כ-MP4.
 
 ליצירת קובץ התקנה למחשב שלכם: `npm run dist`.

@@ -215,7 +215,7 @@ ipcMain.handle('project:open', async () => {
     ...(project.music ? [project.music.path] : []),
   ];
   allowMedia(paths);
-  const missing = [...new Set(paths)].filter((p) => !existsSync(p));
+  const missing = [...new Set(paths.filter(Boolean))].filter((p) => !existsSync(p));
   return { filePath, project, missing };
 });
 

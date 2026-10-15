@@ -82,7 +82,7 @@ test('text overlays and music are layered on top', () => {
     ...opts,
     textInputs: [{ path: '/tmp/t0.png', start: text.start, end: text.end, fade: textFadeDuration(text) }],
   });
-  assert.match(filter, /overlay=0:0:enable='between\(t,1,3\)'/);
+  assert.match(filter, /overlay=x=0:y=0:enable='between\(t,1,3\)'/);
   assert.match(filter, /fade=t=in:st=1:d=0\.4:alpha=1/);
   assert.match(filter, /amix=inputs=2:duration=first/);
   assert.match(filter, /adelay=delays=1000:all=1/);

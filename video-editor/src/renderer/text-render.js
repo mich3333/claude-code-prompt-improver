@@ -6,6 +6,9 @@
 import { textDirection } from '../shared/timeline.js';
 
 export const FONTS = {
+  // Bundled with the app (Hebrew + Latin), so they look the same on every computer.
+  rubik: { label: 'רוביק', css: 'Rubik, Arial, sans-serif' },
+  serifHe: { label: 'סריף עריכתי', css: '"Frank Ruhl Libre", Georgia, serif' },
   sans: { label: 'רגיל', css: 'Arial, "Helvetica Neue", Helvetica, sans-serif' },
   serif: { label: 'קלאסי', css: 'Georgia, "Times New Roman", serif' },
   display: { label: 'בולט', css: 'Impact, "Arial Black", "Helvetica Neue", sans-serif' },
@@ -44,11 +47,13 @@ function hexToRgba(hex, alpha) {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }
 
-export function drawText(ctx, text, W, H, alpha = 1) {
+// dy: extra downward offset as a fraction of H (used by the "rise" animation).
+export function drawText(ctx, text, W, H, alpha = 1, dy = 0) {
   if (!text.text || alpha <= 0) return;
   const box = measureText(ctx, text, W, H);
   const { lines, lineH, size, css } = box;
   ctx.save();
+  if (dy) ctx.translate(0, dy * H);
   ctx.globalAlpha = alpha;
   ctx.font = css;
   ctx.textAlign = 'center';
@@ -56,7 +61,7 @@ export function drawText(ctx, text, W, H, alpha = 1) {
   ctx.direction = textDirection(text.text);
 
   if (text.style === 'box') {
-    ctx.fillStyle = hexToRgba(text.boxColor, 0.65);
+    ctx.fillStyle = hexToRgba(text.boxColor, text.boxOpacity ?? 0.65);
     const r = size * 0.25;
     ctx.beginPath();
     ctx.roundRect(box.x, box.y, box.w, box.h, r);
@@ -88,7 +93,7 @@ export function drawText(ctx, text, W, H, alpha = 1) {
 // Alpha of a text at timeline time t (fade in/out when animated).
 export function textAlpha(text, t) {
   if (t < text.start || t >= text.end) return 0;
-  if (text.animation !== 'fade') return 1;
+  if (text.animation !== 'fade' && text.animation !== 'rise') return 1;
   const f = Math.min(0.4, (text.end - text.start) / 2);
   return Math.min(1, (t - text.start) / f, (text.end - t) / f);
 }
@@ -98,6 +103,9 @@ export async function renderTextPng(text, W, H) {
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
+  // Make sure a bundled font has loaded before drawing with it.
+  const family = FONTS[text.font]?.css ?? FONTS.sans.css;
+  await document.fonts.load(`${text.bold ? 'bold ' : ''}40px ${family}`, text.text).catch(() => {});
   drawText(canvas.getContext('2d'), text, W, H, 1);
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
   return new Uint8Array(await blob.arrayBuffer());

@@ -95,7 +95,7 @@ export class Store {
     this.project = { media: [], texts: [], clips: [], music: null, ...project };
     // URLs are derived from paths (older project files stored file:// URLs).
     for (const item of [...this.project.clips, ...this.project.media, this.project.music]) {
-      if (item) item.url = mediaUrl(item.path);
+      if (item?.path) item.url = mediaUrl(item.path);
     }
     this.filePath = filePath;
     this.selection = null;

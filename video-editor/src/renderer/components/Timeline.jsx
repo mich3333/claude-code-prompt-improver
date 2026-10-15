@@ -169,12 +169,12 @@ export function Timeline() {
       const in0 = clip.in;
       const out0 = clip.out;
       const minSrc = MIN_CLIP_DURATION * clip.speed;
-      const maxOut = clip.kind === 'image' ? Infinity : clip.sourceDuration;
+      const maxOut = clip.kind === 'video' ? clip.sourceDuration : Infinity;
       startDrag(e, ppsRef.current, {
         move: (dt) => {
           store.mutate(() => {
             const c = live();
-            if (handle === 'right' || clip.kind === 'image') {
+            if (handle === 'right' || clip.kind !== 'video') {
               const delta = handle === 'right' ? dt : -dt;
               c.out = Math.min(maxOut, Math.max(c.in + minSrc, out0 + delta * c.speed));
             } else {
@@ -335,7 +335,7 @@ export function Timeline() {
                 const { clip } = seg;
                 const isDragged = dragging?.id === clip.id;
                 const badges = [];
-                if (clip.speed !== 1 && clip.kind !== 'image') badges.push(`${clip.speed}×`);
+                if (clip.speed !== 1 && clip.kind === 'video') badges.push(`${clip.speed}×`);
                 if (clip.filter !== 'none') badges.push(PRESETS[clip.filter]?.label ?? clip.filter);
                 if (clip.kind === 'video' && (clip.muted || !clip.hasAudio)) badges.push('מושתק');
                 return (
@@ -344,11 +344,12 @@ export function Timeline() {
                     data-id={clip.id}
                     layout={glideExcept && glideExcept !== clip.id ? 'position' : false}
                     transition={moveTransition}
-                    className={`tl-clip${selection?.id === clip.id ? ' selected' : ''}${clip.kind === 'image' ? ' image' : ''}${isDragged ? ' dragging' : ''}`}
+                    className={`tl-clip${selection?.id === clip.id ? ' selected' : ''}${clip.kind === 'image' ? ' image' : ''}${clip.kind === 'card' ? ' card' : ''}${isDragged ? ' dragging' : ''}`}
                     style={{
                       left: seg.start * pps,
                       width: Math.max(4, (seg.end - seg.start) * pps),
                       backgroundImage: clip.thumbnail ? `url("${clip.thumbnail}")` : undefined,
+                      backgroundColor: clip.kind === 'card' ? clip.color : undefined,
                       x: isDragged ? dragging.dx : 0,
                     }}
                     title={`${clip.name} — ${formatTime(seg.end - seg.start, true)}`}

@@ -79,6 +79,30 @@ export function createClip(media) {
   };
 }
 
+// A solid-colour clip (title cards, quotes, outros). No media file.
+export function createCard(color, duration, name = 'כרטיס') {
+  return {
+    id: newId('clip'),
+    kind: 'card',
+    name,
+    color,
+    thumbnail: null,
+    sourceDuration: null,
+    hasAudio: false,
+    in: 0,
+    out: duration,
+    speed: 1,
+    volume: 1,
+    muted: false,
+    fit: 'contain',
+    filter: 'none',
+    brightness: 100,
+    contrast: 100,
+    saturation: 100,
+    transition: { type: 'none', duration: 0.8 },
+  };
+}
+
 export function createText(start, end) {
   return {
     id: newId('text'),
@@ -93,7 +117,8 @@ export function createText(start, end) {
     bold: true,
     style: 'shadow', // none | shadow | outline | box
     boxColor: '#000000',
-    animation: 'fade', // none | fade
+    boxOpacity: 0.65,
+    animation: 'fade', // none | fade | rise (fade in while rising into place)
   };
 }
 
@@ -197,6 +222,27 @@ export function splitClipAt(clips, t) {
   const result = [...clips];
   result.splice(seg.index, 1, first, second);
   return result;
+}
+
+// Insert a clip at `index` and keep everything after it in sync: texts
+// (and music) that started at or after the insertion point move by however
+// much the following clip moved. Returns the new clips/texts/music and the
+// timeline time where the inserted clip starts. `prepare(clips)` may adjust
+// the new clip list (e.g. add a transition) before positions are measured.
+export function insertClip(project, index, clip, prepare) {
+  const before = layoutClips(project.clips);
+  const clips = project.clips.map((c) => ({ ...c, transition: { ...c.transition } }));
+  clips.splice(index, 0, clip);
+  prepare?.(clips);
+  const after = layoutClips(clips);
+  const anchor = before[index];
+  const at = anchor ? anchor.start : (before.at(-1)?.end ?? 0);
+  const shift = anchor ? after[index + 1].start - anchor.start : 0;
+  const moved = (start) => start >= at - 1e-6 && shift !== 0;
+  const texts = project.texts.map((t) => (moved(t.start) ? { ...t, start: t.start + shift, end: t.end + shift } : t));
+  let { music } = project;
+  if (music && music.start > 0 && moved(music.start)) music = { ...music, start: music.start + shift };
+  return { clips, texts, music, start: after[index].start, end: after[index].end };
 }
 
 // Text direction from the first strong character (Hebrew/Arabic => rtl).

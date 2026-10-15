@@ -4,6 +4,7 @@
 import { clipOps, toCssFilter } from '../shared/effects.js';
 import { frameSize, layoutClips, locate, sourceTime, totalDuration } from '../shared/timeline.js';
 import { drawText, measureText, textAlpha } from './text-render.js';
+import { textRiseOffset } from '../shared/ffmpeg.js';
 
 const DRIFT_LIMIT = 0.3; // seconds before a playing video is re-synced
 
@@ -67,6 +68,7 @@ export class Player {
     this.resize();
     const ids = new Set();
     for (const clip of this.project.clips) {
+      if (clip.kind === 'card') continue; // solid colour, nothing to load
       ids.add(clip.id);
       let entry = this.media.get(clip.id);
       if (entry && entry.url !== clip.url) {
@@ -116,7 +118,7 @@ export class Player {
     const loc = locate(this.project, this.time);
     if (loc) {
       for (const seg of [loc.current, loc.next]) {
-        if (!seg || seg.clip.kind === 'image') continue;
+        if (!seg || seg.clip.kind !== 'video') continue;
         const el = this.media.get(seg.clip.id)?.el;
         if (!el) continue;
         const target = sourceTime(seg, this.time);
@@ -236,8 +238,12 @@ export class Player {
     const el = this.media.get(clip.id)?.el;
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = '#000';
+    ctx.fillStyle = clip.kind === 'card' ? clip.color : '#000';
     ctx.fillRect(x, 0, W, H);
+    if (clip.kind === 'card') {
+      ctx.restore();
+      return;
+    }
     const sw = el?.videoWidth || el?.naturalWidth;
     const sh = el?.videoHeight || el?.naturalHeight;
     const ready = el && (clip.kind === 'image' ? el.complete && sw : el.readyState >= 2);
@@ -263,7 +269,7 @@ export class Player {
   // A visible video that is still seeking would draw as black; wait for it.
   pending(loc) {
     return [loc.current, loc.next].some((seg) => {
-      if (!seg || seg.clip.kind === 'image') return false;
+      if (!seg || seg.clip.kind !== 'video') return false;
       const el = this.media.get(seg.clip.id)?.el;
       return el && !el.error && (el.seeking || el.readyState < 2);
     });
@@ -313,9 +319,13 @@ export class Player {
     const sel = this.store.selection;
     for (const text of this.project.texts) {
       let alpha = textAlpha(text, this.time);
-      // While paused, show the selected text fully even mid-fade so it can be edited.
-      if (!this.playing && sel?.id === text.id && this.time >= text.start && this.time < text.end) alpha = 1;
-      drawText(ctx, text, W, H, alpha);
+      let dy = textRiseOffset(text, this.time);
+      // While paused, show the selected text fully and at rest so it can be edited.
+      if (!this.playing && sel?.id === text.id && this.time >= text.start && this.time < text.end) {
+        alpha = 1;
+        dy = 0;
+      }
+      drawText(ctx, text, W, H, alpha, dy);
     }
     if (sel?.type === 'text' && !this.playing) {
       const text = this.project.texts.find((t) => t.id === sel.id);

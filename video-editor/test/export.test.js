@@ -147,3 +147,32 @@ test('exported colors match the preview (CSS) for every preset', async () => {
     }
   }
 });
+
+test('exports template cards with rising text', { timeout: 120000 }, async () => {
+  const { applyTemplate, PALETTE } = await import('../src/shared/templates.js');
+  const dir = mkdtempSync(path.join(tmpdir(), 'clipcraft-test-'));
+  try {
+    const media = makeMedia(dir);
+    let project = createProject();
+    project.clips = [createClip(await probe(media.landscape))];
+    project = applyTemplate(project, 'intro-dark').project;
+    project = applyTemplate(project, 'quote', 0.5).project;
+    const expected = totalDuration(project);
+    const { width, height } = frameSize('16:9', 360);
+    const output = path.join(dir, 'tpl.mp4');
+    const png = textPng(dir, width, height);
+    await exportProject(project, { output, width, height, fps: 30, crf: 28, preset: 'ultrafast' }, {
+      tmpDir: dir,
+      texts: project.texts.map((t) => ({ png, start: t.start, end: t.end, fade: textFadeDuration(t), rise: t.animation === 'rise' })),
+    });
+    const info = streams(output);
+    assert.ok(Math.abs(Number(info.format.duration) - expected) < 0.15, `duration ${info.format.duration} vs ${expected}`);
+    // The intro card's colour fills the frame before any text appears.
+    const raw = execFileSync(ffmpegPath(), ['-v', 'error', '-ss', '0.05', '-i', output, '-frames:v', '1',
+      '-vf', 'crop=4:4:300:300', '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1']);
+    const want = [1, 3, 5].map((i) => parseInt(PALETTE.charcoal.slice(i, i + 2), 16));
+    [...raw.subarray(0, 3)].forEach((v, i) => assert.ok(Math.abs(v - want[i]) <= 6, `card colour ${[...raw.subarray(0, 3)]} vs ${want}`));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

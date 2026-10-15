@@ -8,6 +8,7 @@ import {
 import { actions } from '../actions.js';
 import { player, store, useStore } from '../state.js';
 import { FONTS, TEXT_STYLES } from '../text-render.js';
+import { PALETTE } from '../../shared/templates.js';
 import { toast } from '../toast.js';
 import {
   Button, CheckField, ColorField, NumberField, RangeField, Section, Segmented, SelectField,
@@ -147,6 +148,45 @@ function ClipPanel({ clip }) {
   );
 }
 
+const SWATCHES = { [PALETTE.cream]: 'שמנת', [PALETTE.charcoal]: 'פחם', [PALETTE.clay]: 'טרקוטה', [PALETTE.ivory]: 'שנהב' };
+
+function CardPanel({ card }) {
+  const clips = store.project.clips;
+  const index = clips.findIndex((c) => c.id === card.id);
+  return (
+    <div className="insp">
+      <div className="insp-title">
+        <strong>{card.name}</strong>
+        <span>כרטיס צבע. הטקסטים עליו נערכים בנפרד, במסלול הטקסט.</span>
+      </div>
+      <Section title="משך">
+        <NumberField label="הצג למשך" value={card.out} min={MIN_CLIP_DURATION} max={600}
+          onApply={(v) => apply((c) => { c.out = v; })} />
+      </Section>
+      <Section title="רקע">
+        <div className="swatches">
+          {Object.entries(SWATCHES).map(([color, label]) => (
+            <button key={color} type="button" className={`swatch${card.color.toLowerCase() === color.toLowerCase() ? ' active' : ''}`}
+              style={{ background: color }} title={label} aria-label={label}
+              onClick={() => apply((c) => { c.color = color; })} />
+          ))}
+        </div>
+        <ColorField label="צבע מותאם" value={card.color} onChange={(v) => edit((c) => { c.color = v; })} onCommit={commit} />
+      </Section>
+      {index > 0 && (
+        <Section title="מעבר מהקליפ הקודם">
+          <SelectField label="אפקט" options={TRANSITIONS} value={card.transition.type}
+            onChange={(v) => apply((c) => { c.transition = { ...c.transition, type: v }; })} />
+        </Section>
+      )}
+      <div className="btn-row actions">
+        <Button icon="copy" onClick={actions.duplicate}>שכפול</Button>
+        <Button icon="trash" variant="danger" onClick={actions.remove}>מחיקה</Button>
+      </div>
+    </div>
+  );
+}
+
 function TextPanel({ text }) {
   const place = (y) => apply((t) => { t.x = 0.5; t.y = y; });
   return (
@@ -172,7 +212,7 @@ function TextPanel({ text }) {
             apply((t) => { if (now > t.start + 0.2) t.end = now; });
           }}>סיום בסמן</Button>
         </div>
-        <Segmented value={text.animation} options={{ none: 'ללא אנימציה', fade: 'הופעה ודעיכה' }}
+        <Segmented value={text.animation} options={{ none: 'ללא', fade: 'הופעה', rise: 'עלייה עדינה' }}
           onChange={(v) => apply((t) => { t.animation = v; })} />
       </Section>
       <Section title="מראה">
@@ -281,7 +321,7 @@ export function Inspector() {
   const sel = store.selection;
   const target = store.selected();
   let panel = <ProjectPanel />;
-  if (sel?.type === 'clip' && target) panel = <ClipPanel clip={target} />;
+  if (sel?.type === 'clip' && target) panel = target.kind === 'card' ? <CardPanel card={target} /> : <ClipPanel clip={target} />;
   else if (sel?.type === 'text' && target) panel = <TextPanel text={target} />;
   else if (sel?.type === 'music' && target) panel = <MusicPanel music={target} />;
   // Keyed by selection: switching items swaps the panel instantly (selection

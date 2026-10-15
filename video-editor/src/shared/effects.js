@@ -12,6 +12,7 @@ export const PRESETS = {
   dramatic: { label: 'דרמטי', ops: [['contrast', 1.4], ['saturate', 0.7], ['brightness', 0.95]] },
   faded: { label: 'דהוי', ops: [['contrast', 0.85], ['brightness', 1.1], ['saturate', 0.8]] },
   cool: { label: 'קריר', ops: [['hue-rotate', 12], ['saturate', 1.1]] },
+  claude: { label: 'חם (Claude)', ops: [['sepia', 0.18], ['saturate', 0.92], ['contrast', 0.95], ['brightness', 1.04]] },
 };
 
 // Ops for a clip: its preset, then the manual adjustments

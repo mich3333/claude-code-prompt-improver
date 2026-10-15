@@ -21,6 +21,8 @@
     "ffprobe-static": "^3.1.0"
   },
   "devDependencies": {
+    "@fontsource/frank-ruhl-libre": "^5.3.0",
+    "@fontsource/rubik": "^5.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "electron": "^44.7.2",
     "electron-builder": "^26.15.3",

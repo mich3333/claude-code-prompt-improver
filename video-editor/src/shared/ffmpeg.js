@@ -6,6 +6,10 @@ import { clipDuration, effectiveTransition, layoutClips, totalDuration } from '.
 
 const AUDIO_FMT = 'aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo';
 const TEXT_FADE = 0.4;
+// "rise" text: moves up into place over RISE_DURATION with an ease-out cubic,
+// starting RISE_DISTANCE (fraction of frame height) below its final spot.
+export const RISE_DURATION = 0.6;
+export const RISE_DISTANCE = 0.035;
 
 const num = (x) => Number(x.toFixed(4)).toString();
 
@@ -27,8 +31,17 @@ export function atempoChain(speed) {
 }
 
 export function textFadeDuration(text) {
-  return text.animation === 'fade' ? Math.min(TEXT_FADE, (text.end - text.start) / 2) : 0;
+  return text.animation === 'fade' || text.animation === 'rise' ? Math.min(TEXT_FADE, (text.end - text.start) / 2) : 0;
 }
+
+// How far below its resting place a text is drawn at time t (fraction of H).
+export function textRiseOffset(text, t) {
+  if (text.animation !== 'rise') return 0;
+  const p = Math.min(1, Math.max(0, (t - text.start) / RISE_DURATION));
+  return RISE_DISTANCE * (1 - p) ** 3;
+}
+
+const hexColor = (c) => `0x${String(c || '#000000').replace('#', '').slice(0, 6)}`;
 
 /**
  * @param project  the editor project (clips, texts, music, aspect)
@@ -48,7 +61,9 @@ export function buildExport(project, opts) {
 
   clips.forEach((clip, i) => {
     const D = clipDuration(clip);
-    if (clip.kind === 'image') {
+    if (clip.kind === 'card') {
+      inputs.push('-f', 'lavfi', '-t', num(D + 0.5), '-i', `color=c=${hexColor(clip.color)}:s=${W}x${H}:r=${fps}`);
+    } else if (clip.kind === 'image') {
       inputs.push('-loop', '1', '-framerate', String(fps), '-t', num(D + 0.5), '-i', clip.path);
     } else {
       inputs.push('-ss', num(clip.in), '-t', num(clip.out - clip.in), '-i', clip.path);
@@ -64,7 +79,7 @@ export function buildExport(project, opts) {
             ...toFfmpegFilters(clipOps(clip)),
             `pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=black`,
           ];
-    const speed = clip.kind === 'image' ? 1 : clip.speed;
+    const speed = clip.kind === 'video' ? clip.speed : 1;
     const v = [
       `setpts=(PTS-STARTPTS)/${num(speed)}`,
       `fps=${fps}`,
@@ -78,7 +93,7 @@ export function buildExport(project, opts) {
     chains.push(`[${i}:v]${v.join(',')}[v${i}]`);
 
     const volume = clip.muted ? 0 : clip.volume;
-    if (clip.kind !== 'image' && clip.hasAudio && volume > 0) {
+    if (clip.kind === 'video' && clip.hasAudio && volume > 0) {
       const a = [
         'asetpts=PTS-STARTPTS',
         ...atempoChain(speed),
@@ -125,7 +140,11 @@ export function buildExport(project, opts) {
       f.push(`fade=t=out:st=${num(end - fade)}:d=${num(fade)}:alpha=1`);
     }
     chains.push(`[${idx}:v]${f.join(',')}[t${j}]`);
-    chains.push(`[${v}][t${j}]overlay=0:0:enable='between(t,${num(text.start)},${num(end)})':eof_action=pass[ov${j}]`);
+    // Same ease-out curve as textRiseOffset(), evaluated per frame.
+    const y = text.rise
+      ? `y='${num(RISE_DISTANCE * H)}*pow(1-min(max((t-${num(text.start)})/${RISE_DURATION},0),1),3)':eval=frame`
+      : 'y=0';
+    chains.push(`[${v}][t${j}]overlay=x=0:${y}:enable='between(t,${num(text.start)},${num(end)})':eof_action=pass[ov${j}]`);
     v = `ov${j}`;
   });
 
