@@ -7,6 +7,7 @@ import { Composition } from 'remotion';
 import { DURATION, FPS } from './scenes';
 import { H, W } from './ui';
 import { WeeklyAI, type WeeklyProps } from './WeeklyAI';
+import { YEAR_DURATION, Year2026 } from './Year2026';
 
 const defaults: WeeklyProps = {
   avatar: null,
@@ -16,13 +17,16 @@ const defaults: WeeklyProps = {
 };
 
 export const RemotionRoot: React.FC = () => (
-  <Composition
-    id="WeeklyAI"
-    component={WeeklyAI}
-    durationInFrames={DURATION}
-    fps={FPS}
-    width={W}
-    height={H}
-    defaultProps={defaults}
-  />
+  <>
+    <Composition
+      id="WeeklyAI"
+      component={WeeklyAI}
+      durationInFrames={DURATION}
+      fps={FPS}
+      width={W}
+      height={H}
+      defaultProps={defaults}
+    />
+    <Composition id="AI2026" component={Year2026} durationInFrames={YEAR_DURATION} fps={FPS} width={W} height={H} />
+  </>
 );
