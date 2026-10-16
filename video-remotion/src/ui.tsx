@@ -165,7 +165,7 @@ export const Narration: React.FC<{ text: string }> = ({ text }) => {
 
 // The presenter in the bottom corner: a pose image/video from public/ when one is
 // given, otherwise a placeholder silhouette. A gentle bob keeps it alive.
-export const Avatar: React.FC<{ src: string | null; pose: Pose }> = ({ src, pose }) => {
+export const Avatar: React.FC<{ src: string | null; pose: Pose; withAudio?: boolean }> = ({ src, pose, withAudio }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const bob = Math.sin((frame / fps) * Math.PI * 0.9) * 6;
@@ -192,7 +192,7 @@ export const Avatar: React.FC<{ src: string | null; pose: Pose }> = ({ src, pose
   return (
     <div style={{ ...style, borderRadius: 40, overflow: 'hidden', border: '5px solid rgba(255,255,255,0.9)', boxShadow: '0 20px 50px rgba(0,0,0,0.45)', boxSizing: 'border-box' }}>
       {/\.(mp4|webm|mov)$/i.test(src) ? (
-        <OffthreadVideo src={staticFile(src)} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <OffthreadVideo src={staticFile(src)} muted={!withAudio} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
         <Img src={staticFile(src)} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 25%' }} />
       )}
@@ -415,12 +415,9 @@ const Bars: React.FC<{ scene: Extract<Scene, { kind: 'bars' }> }> = ({ scene }) 
 };
 
 // One scene: card content, badge, headline, translation, narration, avatar.
-export const SceneView: React.FC<{ scene: Scene; avatar: string | null; poses: Partial<Record<Pose, string>>; captions: boolean }> = ({
-  scene,
-  avatar,
-  poses,
-  captions,
-}) => {
+// The presenter is drawn by WeeklyAI, outside the scenes, so a talking-head video
+// plays continuously instead of restarting at every cut.
+export const SceneView: React.FC<{ scene: Scene; captions: boolean }> = ({ scene, captions }) => {
   const fullQuote = scene.kind === 'post' && scene.quote.length > 90 && !scene.screenshot;
   const cardBottom = fullQuote ? FULL_CARD.y + FULL_CARD.h : CARD.y + CARD.h;
   const headlineTop = scene.kind === 'outro' ? 640 : cardBottom + 60;
@@ -459,7 +456,6 @@ export const SceneView: React.FC<{ scene: Scene; avatar: string | null; poses: P
         </>
       )}
       {captions && <Narration text={scene.narration} />}
-      <Avatar src={poses[scene.pose] ?? avatar} pose={scene.pose} />
     </AbsoluteFill>
   );
 };
