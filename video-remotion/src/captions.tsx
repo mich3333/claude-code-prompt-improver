@@ -66,7 +66,7 @@ export const Captions: React.FC<{ words: Word[]; top?: number }> = ({ words, top
         right: 0,
         top: top - 140,
         bottom: 0,
-        background: 'linear-gradient(180deg, rgba(10,9,8,0), rgba(10,9,8,0.88) 38%, rgba(10,9,8,0.95))',
+        background: `linear-gradient(180deg, rgba(${COLORS.deepRGB},0), rgba(${COLORS.deepRGB},0.88) 38%, rgba(${COLORS.deepRGB},0.95))`,
         zIndex: 9,
       }}
     />

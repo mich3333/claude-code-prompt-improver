@@ -134,7 +134,7 @@ export const VoiceSplit: React.FC<VoiceSplitProps> = ({ face, words, cues }) => 
             {[0, 1, 2, 3, 4, 5].map((k) => {
               const f = frame - walkAt;
               const x = ((f * 40 + k * 230) % (W + 300)) - 300;
-              return <div key={k} style={{ position: 'absolute', left: W - x, top: 200 + k * (faceH / 7), width: 260, height: 6, borderRadius: 3, background: 'rgba(247,220,147,0.7)', opacity: interpolate(f, [0, 6, WALK - 8, WALK], [0, 1, 1, 0], clamp) }} />;
+              return <div key={k} style={{ position: 'absolute', left: W - x, top: 200 + k * (faceH / 7), width: 260, height: 6, borderRadius: 3, background: `rgba(${COLORS.glowLight},0.7)`, opacity: interpolate(f, [0, 6, WALK - 8, WALK], [0, 1, 1, 0], clamp) }} />;
             })}
             <Footprints f={frame - walkAt} top={faceH - 260} />
           </>
@@ -155,7 +155,7 @@ export const VoiceSplit: React.FC<VoiceSplitProps> = ({ face, words, cues }) => 
       </div>
       {/* Second half slides up from below once the split cue is spoken */}
       {split && Number.isFinite(splitAt) && (
-        <div style={{ position: 'absolute', left: 0, top: HALF + (1 - p) * HALF, width: W, height: HALF, overflow: 'hidden', background: '#0d0b08' }}>
+        <div style={{ position: 'absolute', left: 0, top: HALF + (1 - p) * HALF, width: W, height: HALF, overflow: 'hidden', background: COLORS.deep }}>
           {isVideo(split.second) ? (
             <Sequence from={splitAt} layout="none">
               <OffthreadVideo src={staticFile(split.second)} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -174,7 +174,7 @@ export const VoiceSplit: React.FC<VoiceSplitProps> = ({ face, words, cues }) => 
             width: `${line * 100}%`,
             height: 8,
             background: `linear-gradient(90deg, ${COLORS.goldDark}, ${COLORS.goldLight}, ${COLORS.gold})`,
-            boxShadow: '0 0 30px rgba(247,220,147,0.8)',
+            boxShadow: `0 0 30px rgba(${COLORS.glowLight},0.8)`,
             zIndex: 4,
           }}
         />

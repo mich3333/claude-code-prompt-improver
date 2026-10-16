@@ -64,7 +64,7 @@ export function newsSegments(words: Word[], fps: number, total: number): Segment
 const Studio: React.FC = () => {
   const frame = useCurrentFrame();
   return (
-    <AbsoluteFill style={{ background: `linear-gradient(180deg, #17130d 0%, ${COLORS.bgBottom} 70%)` }}>
+    <AbsoluteFill style={{ background: `linear-gradient(180deg, ${COLORS.bgTop} 0%, ${COLORS.bgBottom} 70%)` }}>
       {/* Light columns and drifting bokeh behind the anchor */}
       {[0, 1, 2, 3, 4, 5].map((i) => (
         <div
@@ -75,7 +75,7 @@ const Studio: React.FC = () => {
             top: 0,
             width: 70,
             height: 1400,
-            background: `linear-gradient(180deg, rgba(226,181,76,0) , rgba(226,181,76,${0.05 + (i % 2) * 0.03}) 60%, rgba(226,181,76,0))`,
+            background: `linear-gradient(180deg, rgba(${COLORS.glow},0) , rgba(${COLORS.glow},${0.05 + (i % 2) * 0.03}) 60%, rgba(${COLORS.glow},0))`,
             filter: 'blur(6px)',
           }}
         />
@@ -94,7 +94,7 @@ const Studio: React.FC = () => {
               width: r * 2,
               height: r * 2,
               borderRadius: '50%',
-              background: `radial-gradient(circle, rgba(247,220,147,${0.12 + random(`bo${i}`) * 0.16}), rgba(247,220,147,0) 70%)`,
+              background: `radial-gradient(circle, rgba(${COLORS.glowLight},${0.12 + random(`bo${i}`) * 0.16}), rgba(${COLORS.glowLight},0) 70%)`,
             }}
           />
         );
@@ -107,7 +107,7 @@ const Studio: React.FC = () => {
           width: 800,
           height: 520,
           borderRadius: '50%',
-          background: 'radial-gradient(ellipse, rgba(226,181,76,0.22), rgba(226,181,76,0) 65%)',
+          background: `radial-gradient(ellipse, rgba(${COLORS.glow},0.22), rgba(${COLORS.glow},0) 65%)`,
         }}
       />
     </AbsoluteFill>
@@ -143,7 +143,7 @@ const wallFrame: React.CSSProperties = {
   borderRadius: 30,
   overflow: 'hidden',
   border: `3px solid ${COLORS.gold}`,
-  boxShadow: '0 30px 80px rgba(0,0,0,0.6), 0 0 70px rgba(226,181,76,0.15)',
+  boxShadow: `0 30px 80px rgba(0,0,0,0.6), 0 0 70px rgba(${COLORS.glow},0.15)`,
   boxSizing: 'border-box',
 };
 
@@ -152,7 +152,7 @@ const WallSting: React.FC<{ f: number; title: string; sub: string }> = ({ f, tit
   const { fps } = useVideoConfig();
   const s = spring({ frame: f - 4, fps, config: { damping: 12, stiffness: 140, mass: 0.8 } });
   return (
-    <div style={{ ...wallFrame, background: 'radial-gradient(circle at 50% 45%, #2a2216, #0d0b08 70%)' }}>
+    <div style={{ ...wallFrame, background: `radial-gradient(circle at 50% 45%, ${COLORS.raised}, ${COLORS.deep} 70%)` }}>
       {[0, 1, 2].map((i) => {
         const p = ((f / 40 + i / 3) % 1);
         return (
@@ -181,7 +181,7 @@ const WallSting: React.FC<{ f: number; title: string; sub: string }> = ({ f, tit
             lineHeight: 1.05,
             transform: `scale(${0.6 + s * 0.4})`,
             opacity: s,
-            background: `linear-gradient(180deg, ${COLORS.goldLight}, ${COLORS.gold} 55%, ${COLORS.goldDark})`,
+            background: `${COLORS.numGradient}`,
             WebkitBackgroundClip: 'text',
             color: 'transparent',
           }}
@@ -220,7 +220,7 @@ const WallStory: React.FC<{ h: Headline; f: number }> = ({ h, f }) => {
           gap: 16,
           padding: '12px 24px 12px 14px',
           borderRadius: 26,
-          background: 'rgba(13,11,8,0.94)',
+          background: `rgba(${COLORS.deepRGB},0.94)`,
           border: `2px solid ${COLORS.cardBorder}`,
           direction: 'ltr',
           transform: `scale(${badge})`,
@@ -234,7 +234,7 @@ const WallStory: React.FC<{ h: Headline; f: number }> = ({ h, f }) => {
               fontSize: 70,
               fontWeight: 800,
               lineHeight: 1,
-              background: `linear-gradient(180deg, ${COLORS.goldLight}, ${COLORS.gold} 55%, ${COLORS.goldDark})`,
+              background: `${COLORS.numGradient}`,
               WebkitBackgroundClip: 'text',
               color: 'transparent',
             }}
@@ -252,8 +252,8 @@ const Desk: React.FC = () => (
     <svg width={W} height={260} viewBox={`0 0 ${W} 260`} style={{ position: 'absolute', left: 0, top: DESK_TOP }}>
       <defs>
         <linearGradient id="desk" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#262017" />
-          <stop offset="1" stopColor="#0b0a08" />
+          <stop offset="0" stopColor={COLORS.raised} />
+          <stop offset="1" stopColor={COLORS.deep} />
         </linearGradient>
       </defs>
       <polygon points={`90,0 ${W - 90},0 ${W - 20},240 20,240`} fill="url(#desk)" />
@@ -298,7 +298,7 @@ const LowerThird: React.FC<{ f: number; tag: string; title: string; meta: string
             alignItems: 'center',
             gap: 20,
             padding: '14px 28px',
-            background: '#f7f3ea',
+            background: COLORS.paper,
             borderRadius: '20px 0 0 20px',
             transform: `scaleX(${bar})`,
             transformOrigin: '100% 50%',
@@ -312,7 +312,7 @@ const LowerThird: React.FC<{ f: number; tag: string; title: string; meta: string
           )}
         </div>
       </div>
-      <div style={{ marginTop: 10, marginRight: 20, display: 'inline-block', padding: '6px 18px', borderRadius: 10, background: 'rgba(13,11,8,0.9)', border: `2px solid ${COLORS.cardBorder}`, color: COLORS.goldLight, fontSize: 30, fontWeight: 600, opacity: text }}>
+      <div style={{ marginTop: 10, marginRight: 20, display: 'inline-block', padding: '6px 18px', borderRadius: 10, background: `rgba(${COLORS.deepRGB},0.9)`, border: `2px solid ${COLORS.cardBorder}`, color: COLORS.goldLight, fontSize: 30, fontWeight: 600, opacity: text }}>
         {meta}
       </div>
     </div>
@@ -323,7 +323,7 @@ const Ticker: React.FC = () => {
   const frame = useCurrentFrame();
   const items = HEADLINES.map((h) => `${h.text} · ${h.outlet}`);
   return (
-    <div style={{ position: 'absolute', top: TICKER, left: 0, right: 0, height: 76, background: '#0d0b08', borderTop: `3px solid ${COLORS.gold}`, overflow: 'hidden' }}>
+    <div style={{ position: 'absolute', top: TICKER, left: 0, right: 0, height: 76, background: COLORS.deep, borderTop: `3px solid ${COLORS.gold}`, overflow: 'hidden' }}>
       <div style={{ position: 'absolute', top: 0, bottom: 0, right: 0, transform: `translateX(${frame * 3}px)`, display: 'flex', alignItems: 'center', direction: 'rtl', whiteSpace: 'nowrap', paddingRight: 210 }}>
         {items.map((t, i) => (
           <span key={i} style={{ fontSize: 34, fontWeight: 600, color: COLORS.ink, marginLeft: 26 }}>

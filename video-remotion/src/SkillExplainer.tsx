@@ -73,12 +73,12 @@ const segments = (words: Word[], fps: number, total: number): Seg[] => {
 const Backdrop: React.FC = () => (
   <AbsoluteFill
     style={{
-      background: `radial-gradient(ellipse at 50% 35%, #1b1711, ${COLORS.bgBottom} 70%)`,
+      background: `radial-gradient(ellipse at 50% 35%, ${COLORS.raised}, ${COLORS.bgBottom} 70%)`,
     }}
   >
     <AbsoluteFill
       style={{
-        backgroundImage: 'radial-gradient(rgba(226,181,76,0.16) 1.6px, transparent 1.6px)',
+        backgroundImage: `radial-gradient(rgba(${COLORS.glow},0.16) 1.6px, transparent 1.6px)`,
         backgroundSize: '28px 28px',
         maskImage: 'radial-gradient(ellipse at 50% 45%, black 30%, transparent 80%)',
         WebkitMaskImage: 'radial-gradient(ellipse at 50% 45%, black 30%, transparent 80%)',
@@ -112,13 +112,13 @@ const Screen: React.FC<{ children: React.ReactNode; f: number; light?: boolean }
         padding: 14,
         boxSizing: 'border-box',
         border: '4px solid rgba(255,255,255,0.92)',
-        boxShadow: '0 0 40px rgba(255,255,255,0.25), 0 0 90px rgba(226,181,76,0.18)',
-        background: 'rgba(10,9,8,0.6)',
+        boxShadow: `0 0 40px rgba(255,255,255,0.25), 0 0 90px rgba(${COLORS.glow},0.18)`,
+        background: `rgba(${COLORS.deepRGB},0.6)`,
         transform: `scale(${0.94 + s * 0.06})`,
         opacity: Math.min(1, s * 1.5),
       }}
     >
-      <div style={{ width: '100%', height: '100%', borderRadius: 22, overflow: 'hidden', background: light ? '#f4f1ea' : '#100e0b', position: 'relative' }}>{children}</div>
+      <div style={{ width: '100%', height: '100%', borderRadius: 22, overflow: 'hidden', background: light ? COLORS.ink : COLORS.deep, position: 'relative' }}>{children}</div>
     </div>
   );
 };
@@ -133,7 +133,7 @@ const PromptBox: React.FC<{ text: string; f: number; size?: number }> = ({ text,
   const shown = typed(text, f, 4, 1.2);
   const done = shown.length >= text.length;
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '22px 26px', borderRadius: 26, background: '#1d1a14', border: `2px solid ${COLORS.cardBorder}`, direction: 'rtl' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '22px 26px', borderRadius: 26, background: COLORS.panel, border: `2px solid ${COLORS.cardBorder}`, direction: 'rtl' }}>
       <div style={{ flex: 1, fontSize: size, fontWeight: 600, color: COLORS.ink, minHeight: size * 1.25 }}>
         {shown}
         {!done && <Cursor f={f} />}
@@ -143,7 +143,7 @@ const PromptBox: React.FC<{ text: string; f: number; size?: number }> = ({ text,
           width: 64,
           height: 64,
           borderRadius: 32,
-          background: done ? COLORS.gold : '#3a342a',
+          background: done ? COLORS.gold : COLORS.edge,
           color: COLORS.onGold,
           fontSize: 38,
           fontWeight: 800,
@@ -189,7 +189,7 @@ const InstallShot: React.FC<{ f: number }> = ({ f }) => {
   const done = f > 6 + cmd.length / 1.4 + 8;
   return (
     <Screen f={f}>
-      <div style={{ height: 70, background: '#1d1a14', display: 'flex', alignItems: 'center', gap: 14, padding: '0 26px', direction: 'ltr' }}>
+      <div style={{ height: 70, background: COLORS.panel, display: 'flex', alignItems: 'center', gap: 14, padding: '0 26px', direction: 'ltr' }}>
         {['#e0605e', '#e2b54c', '#6abf69'].map((c) => (
           <div key={c} style={{ width: 22, height: 22, borderRadius: 11, background: c }} />
         ))}
@@ -235,7 +235,7 @@ const SkillsShot: React.FC<{ f: number }> = ({ f }) => {
                 justifyContent: 'space-between',
                 padding: '18px 26px',
                 borderRadius: 22,
-                background: '#1d1a14',
+                background: COLORS.panel,
                 border: `2px solid ${COLORS.cardBorder}`,
                 transform: `translateX(${(1 - s) * -120}px)`,
                 opacity: Math.min(1, s * 1.4),
@@ -273,12 +273,12 @@ const LaptopChat: React.FC<{ f: number; prompt: string; reply: string; clip: str
   return (
     <div style={{ position: 'absolute', left: PANEL.x, top: PANEL.y + 10, width: PANEL.w, height: PANEL.h, transform: `translateY(${(1 - enter) * 60}px) scale(${0.92 + enter * 0.08})`, opacity: Math.min(1, enter * 1.4) }}>
       {/* Lid */}
-      <div style={{ position: 'absolute', left: (PANEL.w - SCREEN.w - 36) / 2, top: 0, width: SCREEN.w + 36, height: SCREEN.h + 36, borderRadius: 30, background: '#2a2620', border: '2px solid #4a4336', boxShadow: '0 0 60px rgba(255,255,255,0.12), 0 0 90px rgba(226,181,76,0.15)' }}>
+      <div style={{ position: 'absolute', left: (PANEL.w - SCREEN.w - 36) / 2, top: 0, width: SCREEN.w + 36, height: SCREEN.h + 36, borderRadius: 30, background: COLORS.surface, border: `2px solid ${COLORS.edge}`, boxShadow: `0 0 60px rgba(255,255,255,0.12), 0 0 90px rgba(${COLORS.glow},0.15)` }}>
         <div style={{ position: 'absolute', top: 7, left: '50%', marginLeft: -5, width: 10, height: 10, borderRadius: 5, background: '#111' }} />
-        <div style={{ position: 'absolute', left: 18, top: 18, width: SCREEN.w, height: SCREEN.h, borderRadius: 12, overflow: 'hidden', background: '#f6f3ec', direction: 'rtl' }}>
+        <div style={{ position: 'absolute', left: 18, top: 18, width: SCREEN.w, height: SCREEN.h, borderRadius: 12, overflow: 'hidden', background: COLORS.paper, direction: 'rtl' }}>
           {/* App bar */}
-          <div style={{ height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 22px', background: '#ece7dc', borderBottom: '1px solid #dcd5c6' }}>
-            <div style={{ fontSize: 26, fontWeight: 700, color: '#2a2620' }}>שיחה חדשה</div>
+          <div style={{ height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 22px', background: COLORS.paperBar, borderBottom: `1px solid ${COLORS.paperLine}` }}>
+            <div style={{ fontSize: 26, fontWeight: 700, color: COLORS.surface }}>שיחה חדשה</div>
             <div style={{ display: 'flex', gap: 10, direction: 'ltr' }}>
               {['#e0605e', '#e2b54c', '#6abf69'].map((c) => (
                 <div key={c} style={{ width: 16, height: 16, borderRadius: 8, background: c }} />
@@ -288,7 +288,7 @@ const LaptopChat: React.FC<{ f: number; prompt: string; reply: string; clip: str
           {/* Messages */}
           <div style={{ position: 'absolute', top: 76, left: 24, right: 24, bottom: 100, display: 'flex', flexDirection: 'column', gap: 16 }}>
             {f >= sendAt && (
-              <div style={{ alignSelf: 'flex-start', maxWidth: '78%', padding: '14px 22px', borderRadius: '24px 24px 6px 24px', background: '#2a2620', color: '#f6f3ec', fontSize: 34, fontWeight: 600, transform: `scale(${bubble})`, transformOrigin: '100% 100%' }}>
+              <div style={{ alignSelf: 'flex-start', maxWidth: '78%', padding: '14px 22px', borderRadius: '24px 24px 6px 24px', background: COLORS.surface, color: COLORS.paper, fontSize: 34, fontWeight: 600, transform: `scale(${bubble})`, transformOrigin: '100% 100%' }}>
                 {prompt}
               </div>
             )}
@@ -296,13 +296,13 @@ const LaptopChat: React.FC<{ f: number; prompt: string; reply: string; clip: str
               <div style={{ alignSelf: 'flex-end', display: 'flex', gap: 14, alignItems: 'flex-start', direction: 'rtl', flexDirection: 'row-reverse', maxWidth: '86%' }}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-end' }}>
                   {f < replyAt ? (
-                    <div style={{ display: 'flex', gap: 8, padding: '18px 22px', borderRadius: 22, background: '#ffffff', border: '1px solid #e2dccf' }}>
+                    <div style={{ display: 'flex', gap: 8, padding: '18px 22px', borderRadius: 22, background: '#ffffff', border: `1px solid ${COLORS.paperLine}` }}>
                       {[0, 1, 2].map((k) => (
                         <div key={k} style={{ width: 12, height: 12, borderRadius: 6, background: COLORS.goldDark, opacity: 0.35 + 0.65 * Math.abs(Math.sin((f - dotsAt) / 4 - k * 0.8)) }} />
                       ))}
                     </div>
                   ) : (
-                    <div style={{ padding: '14px 22px', borderRadius: 22, background: '#ffffff', border: '1px solid #e2dccf', color: '#2a2620', fontSize: 31, fontWeight: 500, lineHeight: 1.35 }}>{replyShown}</div>
+                    <div style={{ padding: '14px 22px', borderRadius: 22, background: '#ffffff', border: `1px solid ${COLORS.paperLine}`, color: COLORS.surface, fontSize: 31, fontWeight: 500, lineHeight: 1.35 }}>{replyShown}</div>
                   )}
                   {f >= videoAt - 1 && (
                     <div style={{ width: Math.round((vidH * 9) / 16), height: vidH, borderRadius: 16, overflow: 'hidden', border: `3px solid ${COLORS.gold}`, background: '#000', transform: `scale(${vid})`, transformOrigin: '0% 0%', boxShadow: '0 10px 30px rgba(0,0,0,0.25)' }}>
@@ -318,18 +318,18 @@ const LaptopChat: React.FC<{ f: number; prompt: string; reply: string; clip: str
             )}
           </div>
           {/* Input */}
-          <div style={{ position: 'absolute', left: 22, right: 22, bottom: 20, height: 66, borderRadius: 33, background: '#ffffff', border: '2px solid #dcd5c6', display: 'flex', alignItems: 'center', padding: '0 12px 0 24px', gap: 12 }}>
-            <div style={{ flex: 1, fontSize: 32, color: inputText ? '#2a2620' : '#a39b8b', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', left: 22, right: 22, bottom: 20, height: 66, borderRadius: 33, background: '#ffffff', border: `2px solid ${COLORS.paperLine}`, display: 'flex', alignItems: 'center', padding: '0 12px 0 24px', gap: 12 }}>
+            <div style={{ flex: 1, fontSize: 32, color: inputText ? COLORS.surface : COLORS.muted, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden' }}>
               {inputText || 'כתבו הודעה…'}
-              {f < sendAt && inputText && <Cursor f={f} color="#2a2620" />}
+              {f < sendAt && inputText && <Cursor f={f} color={COLORS.surface} />}
             </div>
-            <div style={{ width: 48, height: 48, borderRadius: 24, background: inputText ? COLORS.gold : '#d8d1c2', color: COLORS.onGold, fontSize: 28, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>↑</div>
+            <div style={{ width: 48, height: 48, borderRadius: 24, background: inputText ? COLORS.gold : COLORS.paperLine, color: COLORS.onGold, fontSize: 28, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>↑</div>
           </div>
         </div>
       </div>
       {/* Base */}
-      <div style={{ position: 'absolute', left: 10, right: 10, top: SCREEN.h + 36, height: 34, background: 'linear-gradient(180deg, #3a342a, #1d1a14)', clipPath: 'polygon(4% 0, 96% 0, 100% 100%, 0 100%)', borderRadius: '0 0 18px 18px' }} />
-      <div style={{ position: 'absolute', left: '50%', marginLeft: -90, top: SCREEN.h + 36, width: 180, height: 10, borderRadius: '0 0 10px 10px', background: '#14120e' }} />
+      <div style={{ position: 'absolute', left: 10, right: 10, top: SCREEN.h + 36, height: 34, background: `linear-gradient(180deg, ${COLORS.edge}, ${COLORS.panel})`, clipPath: 'polygon(4% 0, 96% 0, 100% 100%, 0 100%)', borderRadius: '0 0 18px 18px' }} />
+      <div style={{ position: 'absolute', left: '50%', marginLeft: -90, top: SCREEN.h + 36, width: 180, height: 10, borderRadius: '0 0 10px 10px', background: COLORS.deep }} />
     </div>
   );
 };
@@ -406,9 +406,9 @@ const Presenter: React.FC<{ face: string | null; words: Word[]; voice: string | 
           <Img src={staticFile(face)} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 25%' }} />
         )
       ) : (
-        <div style={{ width: '100%', height: '100%', background: 'radial-gradient(ellipse at 50% 70%, #2c2418, #0d0b08 75%)', position: 'relative' }}>
+        <div style={{ width: '100%', height: '100%', background: `radial-gradient(ellipse at 50% 70%, ${COLORS.raised}, ${COLORS.deep} 75%)`, position: 'relative' }}>
           {[0, 1, 2, 3, 4].map((k) => (
-            <div key={k} style={{ position: 'absolute', left: 80 + k * 200, top: 60 + (k % 2) * 90, width: 70, height: 70, borderRadius: 35, background: 'radial-gradient(circle, rgba(247,220,147,0.35), rgba(247,220,147,0) 70%)' }} />
+            <div key={k} style={{ position: 'absolute', left: 80 + k * 200, top: 60 + (k % 2) * 90, width: 70, height: 70, borderRadius: 35, background: `radial-gradient(circle, rgba(${COLORS.glowLight},0.35), rgba(${COLORS.glowLight},0) 70%)` }} />
           ))}
           <div style={{ position: 'absolute', left: (FACE.w - ANCHOR_BOX.w) / 2, top: 10 + Math.sin(t * 2) * 3, transform: 'scale(1.02)', transformOrigin: '50% 0%' }}>
             <Anchor talk={mouth(words, t)} gesture={0} blink={frame % 97 < 4 ? 1 : 0} tilt={Math.sin(t * 1.3) * 2} look={0} />

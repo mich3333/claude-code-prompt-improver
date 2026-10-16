@@ -11,22 +11,69 @@ export const CARD = { x: 43, y: 58, w: 994, h: 730 };
 export const FULL_CARD = { x: 43, y: 58, w: 994, h: 830 };
 export const AVATAR = { x: 560, y: 1190, w: 480, h: 690 };
 
-// Black-and-gold theme, matching ClipCraft's gold templates. Brand logos keep
-// their own colours whatever the theme.
-export const COLORS = {
-  bgTop: '#1a1610',
-  bgBottom: '#0a0908',
-  line: 'rgba(226,181,76,0.14)',
-  gold: '#e2b54c',
-  goldLight: '#f7dc93',
-  goldDark: '#a5761f',
-  card: '#15130f',
-  cardBorder: 'rgba(226,181,76,0.45)',
-  ink: '#f4f1ea',
-  muted: '#8c877c',
-  onGold: '#0a0908',
-  white: '#ffffff',
+// Themes. Keys keep their original names (gold = the accent colour) so every
+// component reads the active theme the same way. Brand logos keep their own
+// colours whatever the theme.
+const THEMES = {
+  // Black and gold, matching ClipCraft's gold templates.
+  gold: {
+    bgTop: '#1a1610',
+    bgBottom: '#0a0908',
+    line: 'rgba(226,181,76,0.14)',
+    gold: '#e2b54c',
+    goldLight: '#f7dc93',
+    goldDark: '#a5761f',
+    card: '#15130f',
+    cardBorder: 'rgba(226,181,76,0.45)',
+    ink: '#f4f1ea',
+    muted: '#8c877c',
+    onGold: '#0a0908',
+    white: '#ffffff',
+    raised: '#2a2216',
+    panel: '#1d1a14',
+    deep: '#0d0b08',
+    surface: '#2a2620',
+    edge: '#3a342a',
+    paper: '#f6f3ec',
+    paperBar: '#ece7dc',
+    paperLine: '#dcd5c6',
+    glow: '226,181,76',
+    glowLight: '247,220,147',
+    deepRGB: '13,11,8',
+    numGradient: 'linear-gradient(180deg, #f7dc93, #e2b54c 55%, #a5761f)',
+  },
+  // Graphite gray with green only at the edges: outlines, glows, highlights.
+  graphite: {
+    bgTop: '#2a2c2f',
+    bgBottom: '#17181a',
+    line: 'rgba(74,222,128,0.10)',
+    gold: '#4ade80',
+    goldLight: '#86efac',
+    goldDark: '#16a34a',
+    card: '#222427',
+    cardBorder: 'rgba(74,222,128,0.45)',
+    ink: '#f3f4f6',
+    muted: '#9ca3af',
+    onGold: '#0b130e',
+    white: '#ffffff',
+    raised: '#303236',
+    panel: '#26282c',
+    deep: '#141517',
+    surface: '#2b2d31',
+    edge: '#3d4045',
+    paper: '#f3f4f6',
+    paperBar: '#e5e7eb',
+    paperLine: '#d1d5db',
+    glow: '74,222,128',
+    glowLight: '134,239,172',
+    deepRGB: '20,21,23',
+    numGradient: 'linear-gradient(180deg, #ffffff, #e5e7eb 55%, #9ca3af)',
+  },
 };
+
+/** The active look for every video. Switch to 'gold' for the black-and-gold one. */
+export const THEME: keyof typeof THEMES = 'graphite';
+export const COLORS = THEMES[THEME];
 
 const pop = (frame: number, fps: number, delay = 0) =>
   spring({ frame: frame - delay, fps, config: { damping: 14, stiffness: 160, mass: 0.7 } });
@@ -226,7 +273,7 @@ const CountUp: React.FC<{ value: number; prefix?: string; suffix?: string; delay
         fontSize: size,
         fontWeight: 800,
         direction: 'ltr',
-        background: `linear-gradient(180deg, ${COLORS.goldLight}, ${COLORS.gold} 55%, ${COLORS.goldDark})`,
+        background: `${COLORS.numGradient}`,
         WebkitBackgroundClip: 'text',
         color: 'transparent',
         lineHeight: 1,

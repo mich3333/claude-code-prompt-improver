@@ -21,13 +21,13 @@ export type VersusProps = { match: string; voice: string | null };
 
 const clamp = { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' } as const;
 const goldText: React.CSSProperties = {
-  background: `linear-gradient(180deg, ${COLORS.goldLight}, ${COLORS.gold} 55%, ${COLORS.goldDark})`,
+  background: `${COLORS.numGradient}`,
   WebkitBackgroundClip: 'text',
   color: 'transparent',
 };
 
 const LogoPlate: React.FC<{ brand: Brand; size: number }> = ({ brand, size }) => (
-  <div style={{ padding: size * 0.16, borderRadius: size * 0.26, background: '#f4f1ea', display: 'flex', boxShadow: '0 14px 40px rgba(0,0,0,0.45)' }}>
+  <div style={{ padding: size * 0.16, borderRadius: size * 0.26, background: COLORS.ink, display: 'flex', boxShadow: '0 14px 40px rgba(0,0,0,0.45)' }}>
     <Logo brand={brand} size={size} />
   </div>
 );
@@ -48,7 +48,7 @@ const Intro: React.FC<{ m: Match }> = ({ m }) => {
           position: 'absolute',
           inset: 0,
           clipPath: right ? 'polygon(56% 0, 100% 0, 100% 100%, 44% 100%)' : 'polygon(0 0, 56% 0, 44% 100%, 0 100%)',
-          background: right ? 'linear-gradient(200deg, #2a2216, #0d0b08 70%)' : 'linear-gradient(160deg, #1d1912, #0a0908 70%)',
+          background: right ? `linear-gradient(200deg, ${COLORS.raised}, ${COLORS.deep} 70%)` : `linear-gradient(160deg, ${COLORS.raised}, ${COLORS.bgBottom} 70%)`,
           transform: `translateX(${(right ? 1 : -1) * (1 - s) * 700}px)`,
         }}
       >
@@ -133,7 +133,7 @@ const ScoreBar: React.FC<{ m: Match; frame: number }> = ({ m, frame }) => {
         justifyContent: 'space-between',
         padding: '0 30px',
         borderRadius: 30,
-        background: 'rgba(13,11,8,0.92)',
+        background: `rgba(${COLORS.deepRGB},0.92)`,
         border: `2px solid ${COLORS.cardBorder}`,
         opacity: shown,
         direction: 'rtl',
@@ -165,7 +165,7 @@ const SideCard: React.FC<{ brand: Brand; v: Value; side: Side; f: number; result
         borderRadius: 36,
         background: COLORS.card,
         border: `${3 + win * 4}px solid ${win > 0.05 ? COLORS.gold : COLORS.cardBorder}`,
-        boxShadow: `0 30px 70px rgba(0,0,0,0.55), 0 0 ${win * 90}px rgba(226,181,76,${win * 0.45})`,
+        boxShadow: `0 30px 70px rgba(0,0,0,0.55), 0 0 ${win * 90}px rgba(${COLORS.glow},${win * 0.45})`,
         boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
