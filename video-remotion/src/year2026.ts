@@ -18,31 +18,35 @@ export type Headline = {
   icon: IconKind;
   /** Optional key number counted up next to the icon. */
   stat?: string;
+  /** The article or post this card is about. */
+  url: string;
+  /** Screenshot of that page in public/articles/, shown in the spotlight. */
+  shot?: string;
 };
 
 export const MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר'];
 
 export const HEADLINES: Headline[] = [
-  { month: 1, date: '27.1', outlet: 'Fortune', text: 'אמודיי: "מדינה של גאונים במרכז נתונים" בעוד שנה-שנתיים', brand: 'anthropic', reported: true, icon: 'document' },
-  { month: 2, date: '3.2', outlet: 'CNBC', text: 'מאסק ממזג את xAI לתוך SpaceX', brand: 'xai', reported: true, icon: 'merge' },
-  { month: 3, date: '10.3', outlet: 'Tech.eu', text: 'AMI Labs של יאן לקון מגייסת יותר ממיליארד דולר', icon: 'money', stat: '$1B+' },
-  { month: 3, date: '31.3', outlet: 'Bloomberg', text: 'OpenAI מוערכת ב-852 מיליארד דולר אחרי סבב של 122 מיליארד', brand: 'openai', icon: 'money', stat: '$852B' },
-  { month: 4, date: '4.2026', outlet: 'VentureBeat', text: 'Anthropic: קצב הכנסות של 30 מיליארד דולר בשנה', brand: 'anthropic', icon: 'chart', stat: '$30B' },
-  { month: 5, date: '28.5', outlet: 'CNBC', text: 'Anthropic מגייסת 65 מיליארד בשווי 965 מיליארד ועוקפת את OpenAI', brand: 'anthropic', icon: 'money', stat: '$965B' },
-  { month: 6, date: '1.6', outlet: 'NPR', text: 'Anthropic מגישה בחשאי טיוטת תשקיף להנפקה', brand: 'anthropic', icon: 'document' },
-  { month: 7, date: '22.7', outlet: 'CNBC', text: 'לאפליקציית Gemini יש 950 מיליון משתמשים בחודש', brand: 'gemini', icon: 'users', stat: '950M' },
-  { month: 8, date: '8.2026', outlet: 'NVIDIA', text: 'Nvidia: 89 מיליארד דולר ממרכזי נתונים ברבעון אחד', icon: 'chip', stat: '$89B' },
-  { month: 9, date: '8.9', outlet: 'TechCrunch', text: 'Mistral מגייסת 3 מיליארד אירו', brand: 'mistral', reported: true, icon: 'money', stat: '€3B' },
-  { month: 9, date: '12.9', outlet: 'Bloomberg', text: 'אלטמן: ההנפקה של OpenAI לא תהיה ב-2026', brand: 'openai', icon: 'calendar' },
-  { month: 9, date: '22.9', outlet: 'Anthropic', text: 'Claude Opus 5.5 יוצא לדרך', brand: 'claude', icon: 'rocket' },
-  { month: 9, date: '23.9', outlet: 'Anthropic', text: 'תגלית בעזרת Claude מתפרסמת ב-Science', brand: 'claude', icon: 'flask' },
-  { month: 9, date: '29.9', outlet: 'Engadget', text: 'DevDay: ל-ChatGPT יש 1.2 מיליארד משתמשים בשבוע', brand: 'openai', icon: 'users', stat: '1.2B' },
-  { month: 9, date: '30.9', outlet: 'Reuters', text: 'גוגל מציגה את Gemini 4 Argon אחרי חודשים של עיכובים', brand: 'gemini', icon: 'rocket' },
-  { month: 10, date: '6.10', outlet: 'Bloomberg', text: 'Nvidia מתקרבת לשווי של 6 טריליון דולר', icon: 'chip' },
-  { month: 10, date: '7.10', outlet: 'Anthropic', text: 'Claude Haiku 5.5: המודל הקטן המהיר ביותר עד היום', brand: 'claude', icon: 'rocket' },
-  { month: 10, date: '7.10', outlet: '@OpenAI', text: 'GPT-6 מגיע ל-ChatGPT לכולם', brand: 'openai', icon: 'rocket' },
-  { month: 10, date: '12.10', outlet: '@finkd', text: 'מטא משיקה את Muse Wonder', brand: 'meta', icon: 'rocket' },
-  { month: 10, date: '13.10', outlet: 'Reuters', text: 'Gemini 4 Argon נפתח לכל המפתחים והעסקים', brand: 'gemini', icon: 'globe' },
-  { month: 10, date: '14.10', outlet: 'CNBC', text: 'שמונה מדינות בארה"ב תובעות את OpenAI', brand: 'openai', reported: true, icon: 'gavel', stat: '8' },
-  { month: 10, date: '14.10', outlet: 'SiliconANGLE', text: 'Anthropic: הכנסות של 16.8 מיליארד דולר ברבעון השלישי', brand: 'anthropic', reported: true, icon: 'chart', stat: '$16.8B' },
+  { month: 1, date: '27.1', outlet: 'Fortune', text: 'אמודיי: "מדינה של גאונים במרכז נתונים" בעוד שנה-שנתיים', brand: 'anthropic', reported: true, icon: 'document', url: 'https://fortune.com/2026/01/27/anthropic-ceo-dario-amodei-essay-warning-ai-adolescence-test-humanity-risks-remedies' },
+  { month: 2, date: '3.2', outlet: 'CNBC', text: 'מאסק ממזג את xAI לתוך SpaceX', brand: 'xai', reported: true, icon: 'merge', url: 'https://www.cnbc.com/2026/02/03/musk-xai-spacex-biggest-merger-ever.html' },
+  { month: 3, date: '10.3', outlet: 'Tech.eu', text: 'AMI Labs של יאן לקון מגייסת יותר ממיליארד דולר', icon: 'money', stat: '$1B+', url: 'https://tech.eu/2026/03/10/yann-lecun-s-paris-based-ai-world-model-startup-raises-more-than-1bn/' },
+  { month: 3, date: '31.3', outlet: 'Bloomberg', text: 'OpenAI מוערכת ב-852 מיליארד דולר אחרי סבב של 122 מיליארד', brand: 'openai', icon: 'money', stat: '$852B', url: 'https://www.bloomberg.com/news/articles/2026-03-31/openai-valued-at-852-billion-after-completing-122-billion-round' },
+  { month: 4, date: '4.2026', outlet: 'VentureBeat', text: 'Anthropic: קצב הכנסות של 30 מיליארד דולר בשנה', brand: 'anthropic', icon: 'chart', stat: '$30B', url: 'https://venturebeat.com/technology/anthropic-says-it-hit-a-30-billion-revenue-run-rate-after-crazy-80x-growth' },
+  { month: 5, date: '28.5', outlet: 'CNBC', text: 'Anthropic מגייסת 65 מיליארד בשווי 965 מיליארד ועוקפת את OpenAI', brand: 'anthropic', icon: 'money', stat: '$965B', url: 'https://www.cnbc.com/2026/05/28/anthropic-open-ai-startup-value.html' },
+  { month: 6, date: '1.6', outlet: 'NPR', text: 'Anthropic מגישה בחשאי טיוטת תשקיף להנפקה', brand: 'anthropic', icon: 'document', url: 'https://www.npr.org/2026/06/01/nx-s1-5843199/anthropic-ipo-filing-ai-large' },
+  { month: 7, date: '22.7', outlet: 'CNBC', text: 'לאפליקציית Gemini יש 950 מיליון משתמשים בחודש', brand: 'gemini', icon: 'users', stat: '950M', url: 'https://www.cnbc.com/2026/07/22/google-earnings-q2-goog-live-updates.html' },
+  { month: 8, date: '8.2026', outlet: 'NVIDIA', text: 'Nvidia: 89 מיליארד דולר ממרכזי נתונים ברבעון אחד', icon: 'chip', stat: '$89B', url: 'https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-second-quarter-fiscal-2027' },
+  { month: 9, date: '8.9', outlet: 'TechCrunch', text: 'Mistral מגייסת 3 מיליארד אירו', brand: 'mistral', reported: true, icon: 'money', stat: '€3B', url: 'https://techcrunch.com/2026/09/08/mistral-raises-e3b-as-sovereign-ai-becomes-big-business/' },
+  { month: 9, date: '12.9', outlet: 'Bloomberg', text: 'אלטמן: ההנפקה של OpenAI לא תהיה ב-2026', brand: 'openai', icon: 'calendar', url: 'https://www.bloomberg.com/news/articles/2026-09-12/openai-ipo-won-t-happen-until-2027-sam-altman-tells-fortune' },
+  { month: 9, date: '22.9', outlet: 'Anthropic', text: 'Claude Opus 5.5 יוצא לדרך', brand: 'claude', icon: 'rocket', url: 'https://www.anthropic.com/claude-opus-5-5' },
+  { month: 9, date: '23.9', outlet: 'Anthropic', text: 'תגלית בעזרת Claude מתפרסמת ב-Science', brand: 'claude', icon: 'flask', url: 'https://www.anthropic.com/news' },
+  { month: 9, date: '29.9', outlet: 'Engadget', text: 'DevDay: ל-ChatGPT יש 1.2 מיליארד משתמשים בשבוע', brand: 'openai', icon: 'users', stat: '1.2B', url: 'https://www.engadget.com/2271985/openai-dev-day-live-blog-chatgpt-news/' },
+  { month: 9, date: '30.9', outlet: 'Reuters', text: 'גוגל מציגה את Gemini 4 Argon אחרי חודשים של עיכובים', brand: 'gemini', icon: 'rocket', url: 'https://live.euronext.com/en/financial-news/google-announces-gemini-4-flagship-ai-model-after-months-delays' },
+  { month: 10, date: '6.10', outlet: 'Bloomberg', text: 'Nvidia מתקרבת לשווי של 6 טריליון דולר', icon: 'chip', url: 'https://www.bloomberg.com/news/articles/2026-10-06/nvidia-heads-for-6-trillion-value-with-chipmaker-back-at-record' },
+  { month: 10, date: '7.10', outlet: 'Anthropic', text: 'Claude Haiku 5.5: המודל הקטן המהיר ביותר עד היום', brand: 'claude', icon: 'rocket', url: 'https://www.anthropic.com/claude-haiku-5-5' },
+  { month: 10, date: '7.10', outlet: '@OpenAI', text: 'GPT-6 מגיע ל-ChatGPT לכולם', brand: 'openai', icon: 'rocket', url: 'https://x.com/OpenAI/status/2107894997538525580' },
+  { month: 10, date: '12.10', outlet: '@finkd', text: 'מטא משיקה את Muse Wonder', brand: 'meta', icon: 'rocket', url: 'https://x.com/finkd/status/2109689311088287773' },
+  { month: 10, date: '13.10', outlet: 'Reuters', text: 'Gemini 4 Argon נפתח לכל המפתחים והעסקים', brand: 'gemini', icon: 'globe', url: 'https://www.galvnews.com/news_reuters/business/google-launches-flagship-ai-model-gemini-4-argon-for-developers-businesses/article_884d80ce-3e8d-5be6-855f-8b91c6aeeaa6.html' },
+  { month: 10, date: '14.10', outlet: 'CNBC', text: 'שמונה מדינות בארה"ב תובעות את OpenAI', brand: 'openai', reported: true, icon: 'gavel', stat: '8', url: 'https://www.cnbc.com/2026/10/14/openai-sued-by-8-states-over-chatgpt-safety-concerns-.html' },
+  { month: 10, date: '14.10', outlet: 'SiliconANGLE', text: 'Anthropic: הכנסות של 16.8 מיליארד דולר ברבעון השלישי', brand: 'anthropic', reported: true, icon: 'chart', stat: '$16.8B', url: 'https://siliconangle.com/2026/10/14/ahead-of-ipo-anthropic-reveals-its-revenue-grow-45-sequentially-to-16-8b-in-q3' },
 ];

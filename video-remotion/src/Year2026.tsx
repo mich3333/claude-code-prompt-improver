@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, Audio, Easing, interpolate, random, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
+import { AbsoluteFill, Audio, Easing, Img, interpolate, random, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { Logo } from './brands';
 import { COLORS, H, W, Waves } from './ui';
 import { Captions, firstSpoken, type Word } from './captions';
@@ -288,6 +288,66 @@ const Spotlight: React.FC<{ S: Schedule; segs: Segment[] }> = ({ S, segs }) => {
   const fadeOut =
     interpolate(frame, [S.scrollStart, S.scrollStart + 10], [0, 1], clamp) * interpolate(frame, [S.explode - 12, S.explode], [1, 0], clamp);
   const h = HEADLINES[i];
+  if (h.shot) {
+    // The real article: a screenshot of its top, slowly pushing in, with the
+    // icon and key number on a badge in the corner.
+    const zoom = 1 + f * 0.0012;
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          top: 110,
+          left: 70,
+          right: 70,
+          height: 600,
+          borderRadius: 34,
+          overflow: 'hidden',
+          background: '#ffffff',
+          border: `3px solid ${COLORS.gold}`,
+          boxShadow: '0 30px 80px rgba(0,0,0,0.65), 0 0 60px rgba(226,181,76,0.18)',
+          transform: `scale(${0.9 + s * 0.1}) translateY(${(1 - s) * 40}px)`,
+          opacity: fadeOut,
+          zIndex: 5,
+        }}
+      >
+        <Img
+          src={staticFile(h.shot)}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 0%', transform: `scale(${zoom})`, transformOrigin: '50% 0%' }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: 22,
+            bottom: 22,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+            padding: '12px 24px 12px 14px',
+            borderRadius: 26,
+            background: 'rgba(13,11,8,0.94)',
+            border: `2px solid ${COLORS.cardBorder}`,
+            direction: 'ltr',
+          }}
+        >
+          <AnimatedIcon kind={h.icon} f={f} fps={fps} size={110} />
+          {h.stat && (
+            <span
+              style={{
+                fontSize: 76,
+                fontWeight: 800,
+                lineHeight: 1,
+                background: `linear-gradient(180deg, ${COLORS.goldLight}, ${COLORS.gold} 55%, ${COLORS.goldDark})`,
+                WebkitBackgroundClip: 'text',
+                color: 'transparent',
+              }}
+            >
+              <StatCount stat={h.stat} f={f} />
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
   return (
     <div
       style={{
