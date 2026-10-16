@@ -3,11 +3,12 @@
 import { PRESETS } from '../../shared/effects.js';
 import {
   ASPECTS, clipDuration, effectiveTransition, formatTime, layoutClips, MIN_CLIP_DURATION, OVERLAY_REGIONS,
-  overlayDuration, sourceTime, SPEEDS, totalDuration, TRANSITIONS,
+  overlayAnimation, overlayDuration, sourceTime, SPEEDS, totalDuration, TRANSITIONS,
 } from '../../shared/timeline.js';
 import { useState } from 'react';
 import { actions, updateGraphic } from '../actions.js';
 import { GRAPHIC_TYPES } from '../../shared/graphics.js';
+import { OVERLAY_ANIMATIONS } from '../../shared/overlay-motion.js';
 import { player, store, ui, useAtom, useStore } from '../state.js';
 import { FONTS, TEXT_STYLES } from '../text-render.js';
 import { PALETTE } from '../../shared/templates.js';
@@ -256,7 +257,8 @@ function OverlayPanel({ overlay }) {
             apply((o) => { o.start = now; });
           }}>התחלה בסמן</Button>
         </div>
-        <CheckField label="כניסה ויציאה רכות" checked={overlay.fade} onChange={(v) => apply((o) => { o.fade = v; })} />
+        <SelectField label="כניסה ויציאה" options={OVERLAY_ANIMATIONS} value={overlayAnimation(overlay)}
+          onChange={(v) => apply((o) => { o.animation = v; delete o.fade; })} />
         <div className="insp-note">על ציר הזמן: <span dir="ltr">{formatTime(overlay.start, true)}–{formatTime(overlay.start + overlayDuration(overlay), true)}</span></div>
       </Section>
 

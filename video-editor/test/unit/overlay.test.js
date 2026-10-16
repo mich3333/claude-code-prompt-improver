@@ -30,7 +30,10 @@ test('overlay alpha fades in and out', () => {
   assert.equal(overlayAlpha(o, 2), 0);
   assert.equal(overlayAlpha(o, 3), 1);
   assert.equal(overlayAlpha(o, 6), 0);
-  assert.equal(overlayAlpha({ ...o, fade: false }, 2), 1);
+  assert.equal(overlayAlpha({ ...o, animation: 'none' }, 2), 1);
+  assert.equal(overlayAlpha({ ...o, animation: 'slideright' }, 2), 1, 'sliding layers do not fade');
+  assert.equal(overlayAlpha({ ...o, animation: undefined, fade: false }, 2), 1, 'old projects: fade off');
+  assert.equal(overlayAlpha({ ...o, animation: undefined, fade: true }, 2), 0, 'old projects: fade on');
 });
 
 test('export places a feathered overlay in the top half at its start time', () => {

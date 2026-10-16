@@ -166,7 +166,7 @@ export function createOverlay(media, start = 0) {
     split: 0.5, // share of the frame height the region covers (top/bottom)
     feather: 0.08, // soft edge, as a share of the frame height
     fit: 'cover',
-    fade: true,
+    animation: 'fade', // entrance/exit: none | fade | slideright | slideleft | slidebottom
     volume: 1,
     muted: true, // the main track usually carries the voice
   };
@@ -188,12 +188,20 @@ export function overlayRect(o, W, H) {
     : { x: 0, y: 0, w: W, h, edge: 'bottom', feather };
 }
 
+// Entrance/exit animation of an overlay. Projects saved before animations
+// existed only have `fade` (true/false).
+export function overlayAnimation(o) {
+  if (o.animation) return o.animation;
+  return o.fade === false ? 'none' : 'fade';
+}
+
 // Opacity of an overlay at timeline time t (short fade in/out when enabled).
-export function overlayAlpha(o, t) {
-  const end = o.start + overlayDuration(o);
+// D is how long it is shown (the export cuts it at the end of the video).
+export function overlayAlpha(o, t, D = overlayDuration(o)) {
+  const end = o.start + D;
   if (t < o.start || t >= end) return 0;
-  if (!o.fade) return 1;
-  const f = Math.min(OVERLAY_FADE, (end - o.start) / 2);
+  if (overlayAnimation(o) !== 'fade') return 1;
+  const f = Math.min(OVERLAY_FADE, D / 2);
   return Math.min(1, (t - o.start) / f, (end - t) / f);
 }
 

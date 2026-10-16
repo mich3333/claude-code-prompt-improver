@@ -139,6 +139,36 @@ test('edit and export a video through the UI', { skip: noDisplay && 'no display 
     assert.ok(Math.abs(overlayStart - 5) < 0.15, `overlay moved to ${overlayStart}`);
     await page.click('#btn-undo');
     assert.equal((await project()).overlays[0].start, 4);
+    // Entrance/exit animation: fade by default; a slide moves the layer in the preview along the shared curve.
+    assert.equal(await page.inputValue('.insp select'), 'fade');
+    await page.selectOption('.insp select', 'slideright');
+    assert.equal((await project()).overlays[0].animation, 'slideright');
+    const offsets = await page.evaluate(async () => {
+      const { player, store } = window.clipcraft;
+      const sel = store.selection;
+      const seen = [];
+      const orig = player.drawOverlay;
+      let last = null;
+      player.drawOverlay = function (o, alpha, off = {}) {
+        last = { alpha, dx: off.dx ?? 0 };
+        return orig.call(this, o, alpha, off);
+      };
+      store.select(null);
+      for (const t of [4.05, 4.6]) {
+        last = null;
+        player.seek(t); // draws once the main video has seeked
+        const until = Date.now() + 5000;
+        while (!last && Date.now() < until) await new Promise((r) => setTimeout(r, 20));
+        seen.push(last);
+      }
+      player.drawOverlay = orig;
+      store.select(sel);
+      return { seen, W: player.canvas.width };
+    });
+    assert.ok(offsets.seen.every(Boolean), 'the preview drew the layer');
+    assert.ok(offsets.seen[0].dx > 0.3 * offsets.W && offsets.seen[0].dx < 0.5 * offsets.W, `mid-slide offset ${offsets.seen[0].dx}`);
+    assert.equal(offsets.seen[0].alpha, 1, 'a sliding layer does not fade');
+    assert.equal(offsets.seen[1].dx, 0, 'landed');
     await page.evaluate(() => window.clipcraft.player.seek(5.5));
     await page.waitForTimeout(1200);
     await shot('02c-split-screen');
