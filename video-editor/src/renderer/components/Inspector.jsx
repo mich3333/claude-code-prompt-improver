@@ -9,6 +9,7 @@ import { actions } from '../actions.js';
 import { player, store, useStore } from '../state.js';
 import { FONTS, TEXT_STYLES } from '../text-render.js';
 import { PALETTE } from '../../shared/templates.js';
+import { CAPTION_LOOK } from '../../shared/captions.js';
 import { toast } from '../toast.js';
 import {
   Button, CheckField, ColorField, NumberField, RangeField, Section, Segmented, SelectField,
@@ -268,7 +269,7 @@ function TextPanel({ text }) {
   return (
     <div className="insp">
       <div className="insp-title">
-        <strong>טקסט</strong>
+        <strong>{text.caption ? 'כתובית' : 'טקסט'}</strong>
         <span>גררו אותו בתצוגה המקדימה כדי להזיז</span>
       </div>
       <Section title="תוכן">
@@ -315,6 +316,21 @@ function TextPanel({ text }) {
         <RangeField label="אנכי" value={Math.round(text.y * 100)} format={pct}
           onChange={(v) => edit((t) => { t.y = v / 100; })} onCommit={commit} />
       </Section>
+      {text.caption && (
+        <Section title="כל הכתוביות">
+          <div className="btn-row">
+            <Button id="captions-apply-all" onClick={() => {
+              const look = Object.fromEntries(CAPTION_LOOK.map((k) => [k, text[k]]));
+              store.update((p) => p.texts.forEach((t) => t.caption && Object.assign(t, look)));
+              toast('המראה הוחל על כל הכתוביות.', 'success', 2500);
+            }}>החלת המראה על כולן</Button>
+            <Button variant="danger" onClick={() => {
+              store.update((p) => { p.texts = p.texts.filter((t) => !t.caption); });
+              store.select(null);
+            }}>מחיקת כל הכתוביות</Button>
+          </div>
+        </Section>
+      )}
       <div className="btn-row actions">
         <Button icon="copy" onClick={actions.duplicate}>שכפול</Button>
         <Button icon="trash" variant="danger" onClick={actions.remove}>מחיקה</Button>

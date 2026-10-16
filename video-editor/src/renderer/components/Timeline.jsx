@@ -478,7 +478,7 @@ export function Timeline() {
             <div className="tl-track tl-track-text" style={{ height: textTrackH }}>
               {project.texts.map((t) => (
                 <div key={t.id} dir="auto" title={t.text}
-                  className={`tl-text${selection?.id === t.id ? ' selected' : ''}`}
+                  className={`tl-text${t.caption ? ' caption' : ''}${selection?.id === t.id ? ' selected' : ''}`}
                   style={{ left: t.start * pps, width: Math.max(6, (t.end - t.start) * pps), top: 4 + rowOf.get(t.id) * TEXT_ROW_H }}
                   onPointerDown={(e) => onTextDown(e, t)}>
                   <span className="name">{t.text.split('\n')[0] || '(ריק)'}</span>

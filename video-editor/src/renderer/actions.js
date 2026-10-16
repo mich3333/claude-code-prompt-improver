@@ -209,6 +209,15 @@ export const actions = {
     }
   },
 
+  captions() {
+    if (!store.project.clips.length) {
+      toast('הוסיפו קודם סרטון שמדברים בו.', 'warn');
+      return;
+    }
+    player.pause();
+    ui.captionsOpen.set(true);
+  },
+
   export() {
     if (!store.project.clips.length) {
       toast('הוסיפו לפחות סרטון או תמונה אחת לפני הייצוא.', 'warn');

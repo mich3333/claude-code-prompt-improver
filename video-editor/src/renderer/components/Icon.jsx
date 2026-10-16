@@ -16,6 +16,7 @@ const PATHS = {
   plus: 'M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z',
   fit: 'M3 3h6v2H5v4H3zm12 0h6v6h-2V5h-4zM3 15h2v4h4v2H3zm16 0h2v6h-6v-2h4z',
   copy: 'M8 3h12v12h-2V5H8zM4 7h12v14H4z',
+  captions: 'M3 5h18v14H3zm2 2v10h14V7zm2 6h4v2H7zm5 0h5v2h-5zm-5-3h7v2H7zm8 0h2v2h-2z',
   layers: 'M12 3 2 8.5l10 5.5 10-5.5zM4.6 12.2 2 13.6l10 5.5 10-5.5-2.6-1.4L12 16.3z',
   check: 'M9.5 16.2 5.3 12l-1.4 1.4 5.6 5.6L20.1 8.4 18.7 7z',
   alert: 'M11 7h2v6h-2zm0 8h2v2h-2zM12 2 1 21h22z',
@@ -26,7 +27,7 @@ export function Icon({ name, size = 16 }) {
   return (
     <span className="icon" style={{ width: size, height: size }} aria-hidden="true">
       <svg viewBox="0 0 24 24">
-        <path d={PATHS[name]} fillRule={name === 'info' || name === 'alert' ? 'evenodd' : undefined} />
+        <path d={PATHS[name]} fillRule={['info', 'alert', 'captions'].includes(name) ? 'evenodd' : undefined} />
       </svg>
     </span>
   );

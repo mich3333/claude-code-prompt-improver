@@ -6,6 +6,7 @@ A desktop video editor (Electron + React + Motion, with FFmpeg for export) with 
 
 - **Cut and join**: import videos and photos, drag to reorder, trim by dragging clip edges (or set start/end at the playhead), and split at the playhead.
 - **Split screen**: put a photo or video on a layer above the main video, in the top or bottom part of the frame or full frame, with a soft blended edge between the halves.
+- **Automatic captions**: transcribes the speech in your clips with ElevenLabs Scribe and adds short, punchy captions (1–4 words each) timed to the words.
 - **Text and captions**: multi-line titles with full Hebrew/RTL support, 5 fonts, size, color, bold, shadow/outline/box styles, and fade in/out. Drag text directly on the preview to position it.
 - **Music and audio**: a background music track with volume, start point, "skip intro", loop, and fade in/out. Each clip has its own volume and mute.
 - **Filters**: 8 color presets (B&W, Sepia, Vintage, Vivid, Dramatic, Faded, Cool) plus brightness, contrast and saturation.
@@ -71,6 +72,19 @@ The interface is in Hebrew and laid out right to left. The timeline and the play
 | Ctrl+S, Ctrl+O, Ctrl+I, Ctrl+M, Ctrl+E | Save, open, import, music, export |
 | Ctrl + mouse wheel | Zoom timeline |
 
+## Automatic captions
+
+**כתוביות** (Captions) in the toolbar turns the speech in your video into short captions, timed to each word, in the Reels/TikTok style.
+
+1. Put the video where you talk on the video track (muted clips and clips without sound are skipped).
+2. Click **כתוביות** and paste an [ElevenLabs](https://elevenlabs.io) API key (account settings → API Keys). Tick "remember" to keep it on this computer; it is encrypted with the operating system's keychain and never leaves the app's main process.
+3. Choose the language (or automatic detection), how many words per caption (1–4), and where they go: top, middle or bottom. With a split screen, the middle (the seam between the halves) is the default.
+4. Click **יצירת כתוביות**. The sound of each clip is sent to ElevenLabs Scribe, and the captions are added to the text track as one undo step.
+
+Each caption is a normal text item: fix a word, move it, or change its timing. Style one caption and click **החלת המראה על כולן** (apply to all) to restyle all of them. Running it again replaces the previous captions.
+
+Transcription is billed by ElevenLabs per minute of audio, and the audio is sent to their servers. Captions are exported efficiently: still texts share a few FFmpeg inputs instead of one input each, so long videos with many captions export quickly.
+
 ## Claude-style templates
 
 The **תבניות** (Templates) tab next to the media library adds ready-made pieces in a Claude-inspired style: warm cream and charcoal backgrounds, a terracotta accent, an editorial serif (Frank Ruhl Libre) with Rubik for supporting text, and calm motion. Titles rise gently into place, and scenes dissolve into each other. The style is imitated only; no logos or brand marks are included.
@@ -116,7 +130,9 @@ src/shared/             pure logic shared by UI and export
   timeline.js           project model, layout, transitions, split
   effects.js            color presets → CSS filters (preview) and FFmpeg filters (export)
   ffmpeg.js             builds the FFmpeg filter graph for a project
-src/main/media.js       runs FFprobe/FFmpeg (probe, thumbnails, export with progress)
+  captions.js           automatic captions: what to transcribe, word timing, short caption grouping
+src/main/media.js       runs FFprobe/FFmpeg (probe, thumbnails, audio extraction, export with progress)
+src/main/scribe.js      ElevenLabs Scribe speech-to-text client
 src/renderer/           the editor UI in React
   components/           App, Timeline, Inspector, Preview, MediaBin, ExportDialog, Toaster
   state.js              store/player singletons and their React hooks
@@ -138,6 +154,7 @@ test/                   unit, export and UI tests
 2. בטרמינל: `cd video-editor`, אחר כך `npm install`, ואז `npm start`. לפיתוח עם רענון אוטומטי: `npm run dev`.
 3. לחצו על **ייבוא מדיה** (או גררו קבצים לחלון), ערכו על ציר הזמן, והוסיפו טקסט (**הוספת טקסט**) ומוזיקה (**הוספת מוזיקה**).
    בלשונית **תבניות** יש פתיח, ציטוט, כותרת תחתונה, סיום וצבע חם בסגנון Claude. לחיצה אחת מוסיפה אותם.
+   **כתוביות אוטומטיות**: לחצו על **כתוביות**, הדביקו מפתח API של ElevenLabs, ובחרו שפה, כמה מילים בכל כתובית ומיקום. הדיבור מתומלל והכתוביות נוספות למסלול הטקסט, כל אחת בזמן שבו אומרים אותה.
    **מסך מפוצל**: שימו את הסרטון שלכם (עם הפנים) במסלול הווידאו, ואת הגרפיקה הוסיפו כשכבה עליונה בכפתור השכבות שליד הקובץ בספריית המדיה. בפאנל ההגדרות בוחרים למעלה / למטה / מסך מלא, את הגובה ואת ריכוך הקצה.
 4. בחרו גודל **מסגרת** ולחצו על **ייצוא** כדי לשמור את הסרטון כ-MP4.
 
