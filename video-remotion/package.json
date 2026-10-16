@@ -1,0 +1,25 @@
+{
+  "name": "weekly-ai-remotion",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Hebrew weekly AI summary reel (9:16), built with Remotion",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render WeeklyAI out/weekly-ai.mp4",
+    "still": "remotion still WeeklyAI out/still.png",
+    "typecheck": "tsc --noEmit"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@fontsource/rubik": "^5.3.0",
+    "@remotion/cli": "^4.0.536",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.536",
+    "simple-icons": "^16.35.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "typescript": "^5.6.3"
+  }
+}
