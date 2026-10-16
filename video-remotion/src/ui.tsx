@@ -11,14 +11,20 @@ export const CARD = { x: 43, y: 58, w: 994, h: 730 };
 export const FULL_CARD = { x: 43, y: 58, w: 994, h: 830 };
 export const AVATAR = { x: 560, y: 1190, w: 480, h: 690 };
 
+// Black-and-gold theme, matching ClipCraft's gold templates. Brand logos keep
+// their own colours whatever the theme.
 export const COLORS = {
-  navyTop: '#0d1d45',
-  navyBottom: '#050b1f',
-  line: 'rgba(120,160,255,0.22)',
+  bgTop: '#1a1610',
+  bgBottom: '#0a0908',
+  line: 'rgba(226,181,76,0.14)',
   gold: '#e2b54c',
   goldLight: '#f7dc93',
-  ink: '#111318',
-  muted: '#5b6070',
+  goldDark: '#a5761f',
+  card: '#15130f',
+  cardBorder: 'rgba(226,181,76,0.45)',
+  ink: '#f4f1ea',
+  muted: '#8c877c',
+  onGold: '#0a0908',
   white: '#ffffff',
 };
 
@@ -44,7 +50,7 @@ export const Waves: React.FC = () => {
     return <path key={i} d={pts.join(' ')} stroke={COLORS.line} strokeWidth={2} fill="none" />;
   });
   return (
-    <AbsoluteFill style={{ background: `linear-gradient(180deg, ${COLORS.navyTop}, ${COLORS.navyBottom})` }}>
+    <AbsoluteFill style={{ background: `linear-gradient(180deg, ${COLORS.bgTop}, ${COLORS.bgBottom})` }}>
       <svg width={W} height={H}>{lines}</svg>
     </AbsoluteFill>
   );
@@ -64,7 +70,8 @@ export const Card: React.FC<{ children: React.ReactNode; full?: boolean }> = ({ 
         top: box.y,
         width: box.w,
         height: box.h,
-        background: COLORS.white,
+        background: COLORS.card,
+        border: `2px solid ${COLORS.cardBorder}`,
         borderRadius: 36,
         boxShadow: '0 24px 60px rgba(0,0,0,0.35)',
         transform: `translateY(${(1 - s) * 60}px) scale(${0.94 + s * 0.06})`,
@@ -100,8 +107,8 @@ export const Badge: React.FC<{ text: string; bottom: number }> = ({ text, bottom
     >
       <div
         style={{
-          background: '#2b2f36',
-          color: COLORS.white,
+          background: COLORS.gold,
+          color: COLORS.onGold,
           fontSize: 30,
           fontWeight: 700,
           padding: '12px 26px',
@@ -181,8 +188,8 @@ export const Avatar: React.FC<{ src: string | null; pose: Pose; withAudio?: bool
       <div style={{ ...style, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
         <svg width={480} height={646} viewBox="0 0 520 700">
           <circle cx={260} cy={230} r={150} fill="#c99a74" />
-          <path d="M40 700 C 60 470, 160 410, 260 410 C 360 410, 460 470, 480 700 Z" fill="#1d2433" />
-          <text x={260} y={600} textAnchor="middle" fill="#8fa3d1" fontSize={34} fontFamily="Rubik">
+          <path d="M40 700 C 60 470, 160 410, 260 410 C 360 410, 460 470, 480 700 Z" fill="#2a241a" />
+          <text x={260} y={600} textAnchor="middle" fill={COLORS.muted} fontSize={34} fontFamily="Rubik">
             {`אווטאר · ${pose}`}
           </text>
         </svg>
@@ -219,7 +226,7 @@ const CountUp: React.FC<{ value: number; prefix?: string; suffix?: string; delay
         fontSize: size,
         fontWeight: 800,
         direction: 'ltr',
-        background: `linear-gradient(180deg, ${COLORS.goldLight}, ${COLORS.gold} 55%, #a5761f)`,
+        background: `linear-gradient(180deg, ${COLORS.goldLight}, ${COLORS.gold} 55%, ${COLORS.goldDark})`,
         WebkitBackgroundClip: 'text',
         color: 'transparent',
         lineHeight: 1,
@@ -291,7 +298,7 @@ const Post: React.FC<{ scene: Extract<Scene, { kind: 'post' }> }> = ({ scene }) 
           style={{
             fontSize: 34,
             fontWeight: 600,
-            color: '#8a6514',
+            color: COLORS.goldLight,
             textAlign: 'center',
             lineHeight: 1.35,
             opacity: fadeIn(frame, 24),
@@ -392,7 +399,7 @@ const Bars: React.FC<{ scene: Extract<Scene, { kind: 'bars' }> }> = ({ scene }) 
                   width: `${(b.value / max) * 100 * p}%`,
                   height: '100%',
                   borderRadius: 14,
-                  background: `linear-gradient(90deg, #a5761f, ${COLORS.gold}, ${COLORS.goldLight})`,
+                  background: `linear-gradient(90deg, ${COLORS.goldDark}, ${COLORS.gold}, ${COLORS.goldLight})`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'flex-end',
@@ -400,7 +407,7 @@ const Bars: React.FC<{ scene: Extract<Scene, { kind: 'bars' }> }> = ({ scene }) 
                   boxSizing: 'border-box',
                 }}
               >
-                <span style={{ fontSize: 30, fontWeight: 800, color: COLORS.ink, opacity: p }}>{Math.round(b.value * p)}</span>
+                <span style={{ fontSize: 30, fontWeight: 800, color: COLORS.onGold, opacity: p }}>{Math.round(b.value * p)}</span>
               </div>
             </div>
             <div style={{ width: 120, display: 'flex', justifyContent: 'center', opacity: p }}>
@@ -447,7 +454,7 @@ export const SceneView: React.FC<{ scene: Scene; captions: boolean }> = ({ scene
               left: 60,
               right: 60,
               textAlign: 'center',
-              color: '#9fb0d6',
+              color: COLORS.muted,
               fontSize: 30,
             }}
           >
