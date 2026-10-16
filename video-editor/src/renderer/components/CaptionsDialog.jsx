@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
-  CAPTION_LANGUAGES, CAPTION_POSITIONS, captionSources, captionTexts, defaultCaptionPosition, groupWords,
+  CAPTION_LANGUAGES, CAPTION_LOOKS, CAPTION_POSITIONS, captionSources, captionTexts, defaultCaptionPosition, groupWords,
   toTimelineWords,
 } from '../../shared/captions.js';
 import { formatTime } from '../../shared/timeline.js';
@@ -18,15 +18,15 @@ const WORDS = { 1: 'מילה', 2: '2', 3: '3', 4: '4' };
 
 function loadSettings() {
   try {
-    return { language: 'auto', words: '3', ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') };
+    return { language: 'auto', words: '3', look: 'classic', ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') };
   } catch {
-    return { language: 'auto', words: '3' };
+    return { language: 'auto', words: '3', look: 'classic' };
   }
 }
 
 function saveSettings(s) {
   try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ language: s.language, words: s.words }));
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ language: s.language, words: s.words, look: s.look }));
   } catch {
     // remembered settings are a convenience only
   }
@@ -126,7 +126,7 @@ function DialogBody({ close, setBusy }) {
       setPhase({ name: 'error', error: 'לא זוהה דיבור בסרטון.' });
       return;
     }
-    const texts = captionTexts(groupWords(words, { maxWords: Number(settings.words) }), { position });
+    const texts = captionTexts(groupWords(words, { maxWords: Number(settings.words) }), { position, look: settings.look });
     store.update((p) => {
       if (replace) p.texts = p.texts.filter((t) => !t.caption);
       p.texts.push(...texts);
@@ -181,6 +181,11 @@ function DialogBody({ close, setBusy }) {
       <div className="modal-field">
         <span>מילים בכל כתובית</span>
         <Segmented value={settings.words} options={WORDS} onChange={(v) => set('words')(String(v))} />
+      </div>
+      <div className="modal-field">
+        <span>סגנון</span>
+        <Segmented value={settings.look} options={Object.fromEntries(Object.entries(CAPTION_LOOKS).map(([k, v]) => [k, v.label]))}
+          onChange={(v) => set('look')(v)} />
       </div>
       <div className="modal-field">
         <span>מיקום</span>

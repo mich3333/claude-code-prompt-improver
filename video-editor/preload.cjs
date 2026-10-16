@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on('export:progress', listener);
     return () => ipcRenderer.removeListener('export:progress', listener);
   },
+  encodeGraphic: (args) => ipcRenderer.invoke('graphics:encode', args),
   captionsKeyStatus: () => ipcRenderer.invoke('captions:keyStatus'),
   setCaptionsKey: (args) => ipcRenderer.invoke('captions:setKey', args),
   forgetCaptionsKey: () => ipcRenderer.invoke('captions:forgetKey'),

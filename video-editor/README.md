@@ -85,6 +85,27 @@ Each caption is a normal text item: fix a word, move it, or change its timing. S
 
 Transcription is billed by ElevenLabs per minute of audio, and the audio is sent to their servers. Captions are exported efficiently: still texts share a few FFmpeg inputs instead of one input each, so long videos with many captions export quickly.
 
+## Black-and-gold templates
+
+The **תבניות** (Templates) tab opens with a black-and-gold set for vertical "explainer" videos: the graphic sits in the top half and you talk in the bottom half.
+
+| Template | What it adds |
+| --- | --- |
+| מספר גדול (big number) | A gold number that counts up ($2T, ×7, 3,830 ₪), with a small title and an optional year strip |
+| גרף עמודות (bar chart) | Gold bars that grow one after another, with values and labels (one `label: value` line per bar) |
+| ציר שנים (year timeline) | A big year and a timeline whose gold dot slides to it |
+| כתוביות אדומות (red captions) | Turns the captions red and puts them on the seam between the halves, and makes this the default look for new captions |
+
+Each graphic is drawn by the editor and saved as a short video in the app's data folder, then placed at the playhead as a split-screen layer. Select it to edit the title, the number or the bars, and click **עדכון הגרפיקה** (update); its timing and placement stay as they are.
+
+## Get the app
+
+Ready-made installers are built by GitHub Actions on every push and published as the **ClipCraft (latest build)** pre-release under the repository's Releases:
+
+- **Mac (Apple Silicon)**: `ClipCraft-…-mac-arm64.dmg`. Open it and drag ClipCraft to Applications. The app is not notarized by Apple, so the first time macOS blocks it: open **System Settings → Privacy & Security** and click **Open Anyway** (or right-click the app → Open). If macOS says the app "is damaged", run `xattr -cr /Applications/ClipCraft.app` in Terminal once.
+- **Windows**: `ClipCraft-…-win-x64.exe`. If SmartScreen warns, click **More info → Run anyway**.
+- **Linux**: `ClipCraft-…-linux-x86_64.AppImage`. Make it executable and run it.
+
 ## Claude-style templates
 
 The **תבניות** (Templates) tab next to the media library adds ready-made pieces in a Claude-inspired style: warm cream and charcoal backgrounds, a terracotta accent, an editorial serif (Frank Ruhl Libre) with Rubik for supporting text, and calm motion. Titles rise gently into place, and scenes dissolve into each other. The style is imitated only; no logos or brand marks are included.
@@ -131,12 +152,14 @@ src/shared/             pure logic shared by UI and export
   effects.js            color presets → CSS filters (preview) and FFmpeg filters (export)
   ffmpeg.js             builds the FFmpeg filter graph for a project
   captions.js           automatic captions: what to transcribe, word timing, short caption grouping
+  graphics.js           black-and-gold graphics: types, defaults, count-up and bar parsing
 src/main/media.js       runs FFprobe/FFmpeg (probe, thumbnails, audio extraction, export with progress)
 src/main/scribe.js      ElevenLabs Scribe speech-to-text client
 src/renderer/           the editor UI in React
   components/           App, Timeline, Inspector, Preview, MediaBin, ExportDialog, Toaster
   state.js              store/player singletons and their React hooks
   player.js             canvas preview engine (the same compositing rules as the export)
+  graphics.js           draws the black-and-gold graphics frame by frame
   motion.js             motion tokens (easing curves, durations)
 test/                   unit, export and UI tests
 ```
@@ -154,6 +177,7 @@ test/                   unit, export and UI tests
 2. בטרמינל: `cd video-editor`, אחר כך `npm install`, ואז `npm start`. לפיתוח עם רענון אוטומטי: `npm run dev`.
 3. לחצו על **ייבוא מדיה** (או גררו קבצים לחלון), ערכו על ציר הזמן, והוסיפו טקסט (**הוספת טקסט**) ומוזיקה (**הוספת מוזיקה**).
    בלשונית **תבניות** יש פתיח, ציטוט, כותרת תחתונה, סיום וצבע חם בסגנון Claude. לחיצה אחת מוסיפה אותם.
+   **שחור וזהב**: בלשונית **תבניות** יש מספר גדול, גרף עמודות, ציר שנים וכתוביות אדומות, בסגנון סרטוני ההסבר האנכיים: הגרפיקה למעלה, אתם למטה. את התוכן עורכים בפאנל ההגדרות.
    **כתוביות אוטומטיות**: לחצו על **כתוביות**, הדביקו מפתח API של ElevenLabs, ובחרו שפה, כמה מילים בכל כתובית ומיקום. הדיבור מתומלל והכתוביות נוספות למסלול הטקסט, כל אחת בזמן שבו אומרים אותה.
    **מסך מפוצל**: שימו את הסרטון שלכם (עם הפנים) במסלול הווידאו, ואת הגרפיקה הוסיפו כשכבה עליונה בכפתור השכבות שליד הקובץ בספריית המדיה. בפאנל ההגדרות בוחרים למעלה / למטה / מסך מלא, את הגובה ואת ריכוך הקצה.
 4. בחרו גודל **מסגרת** ולחצו על **ייצוא** כדי לשמור את הסרטון כ-MP4.

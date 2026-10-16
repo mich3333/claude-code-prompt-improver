@@ -66,16 +66,20 @@ export function groupWords(words, { maxWords = 3, maxChars = 18, maxGap = 0.5 } 
   });
 }
 
+// Caption looks: big white with an outline, or red on the split-screen seam
+// (the black-and-gold reference style).
+export const CAPTION_LOOKS = {
+  classic: { label: 'לבן', look: { size: 0.085, color: '#ffffff', font: 'rubik', bold: true, style: 'outline' } },
+  red: { label: 'אדום (כמו ברפרנס)', look: { size: 0.062, color: '#ef4444', font: 'rubik', bold: true, style: 'shadow' } },
+};
+
 // Caption texts in the editor's text format, marked so they can be replaced.
-export function captionTexts(chunks, { position = 'bottom' } = {}) {
+export function captionTexts(chunks, { position = 'bottom', look = 'classic' } = {}) {
   return chunks.map((c) => ({
     ...createText(c.start, c.end),
     text: c.text,
     y: POSITION_Y[position] ?? POSITION_Y.bottom,
-    size: 0.085,
-    font: 'rubik',
-    bold: true,
-    style: 'outline',
+    ...(CAPTION_LOOKS[look] ?? CAPTION_LOOKS.classic).look,
     animation: 'none',
     caption: true,
   }));

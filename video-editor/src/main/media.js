@@ -113,6 +113,18 @@ export async function extractAudio(source, output, { signal } = {}) {
   return output;
 }
 
+// Numbered JPEG frames (frame_0000.jpg, ...) -> H.264 video that holds the
+// last frame for `hold` more seconds (used for the generated graphics).
+export async function encodeFrames(dir, { fps, hold }, output) {
+  await run(ffmpegPath(), [
+    '-hide_banner', '-v', 'error', '-y',
+    '-framerate', String(fps), '-i', path.join(dir, 'frame_%04d.jpg'),
+    '-vf', `tpad=stop_mode=clone:stop_duration=${Math.max(0, hold)},format=yuv420p`,
+    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '17', '-movflags', '+faststart', output,
+  ]);
+  return output;
+}
+
 export async function exportProject(project, opts, { tmpDir, texts = [], onProgress, signal }) {
   const textInputs = [];
   for (let i = 0; i < texts.length; i++) {

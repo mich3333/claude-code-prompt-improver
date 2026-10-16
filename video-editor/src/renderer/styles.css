@@ -431,3 +431,24 @@ kbd {
 .link-btn:hover { text-decoration: underline; }
 .modal .segmented { min-width: 0; }
 .tl-text.caption { background: var(--caption-clip); }
+
+/* ---------- black-and-gold templates ---------- */
+
+.tpl-group { margin-top: 6px; font-weight: 600; color: var(--text); }
+.tpl-card:disabled { opacity: 0.6; cursor: progress; }
+.gold-preview {
+  display: grid; place-items: center; overflow: hidden;
+  background-image: radial-gradient(circle at 50% 65%, rgba(226, 181, 76, 0.22), transparent 70%) !important;
+}
+.gold-number {
+  font: 800 22px Rubik, sans-serif; direction: ltr;
+  background: linear-gradient(#f7dc93, #e2b54c 55%, #a5761f); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.gold-year { font: 800 20px Rubik, sans-serif; color: #f4f1ea; }
+.gold-bars { display: flex; align-items: flex-end; gap: 4px; height: 28px; }
+.gold-bars span { width: 8px; border-radius: 2px 2px 0 0; background: linear-gradient(#f7dc93, #a5761f); }
+.gold-caption { font: 700 11px Rubik, sans-serif; color: #ef4444; }
+.insp textarea.graphic-values { font-family: inherit; direction: ltr; text-align: left; }
+.insp input.graphic-field {
+  width: 100%; height: 28px; padding: 0 8px; background: var(--panel-2); border: 1px solid var(--line-2); border-radius: 6px;
+}

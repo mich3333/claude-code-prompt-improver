@@ -44,6 +44,7 @@ function atom(initial) {
 export const ui = {
   exportOpen: atom(false),
   captionsOpen: atom(false),
+  graphicBusy: atom(false),
   dropActive: atom(false),
 };
 

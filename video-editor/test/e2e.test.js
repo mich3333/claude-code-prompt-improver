@@ -6,7 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -291,6 +291,30 @@ test('automatic captions from a (fake) ElevenLabs Scribe server', { skip: noDisp
     assert.equal((await project()).texts.length, 2);
     await page.click('.modal button:has-text("סגירה")');
 
+    // Black-and-gold templates: a big-number graphic on top, edited, and red captions on the seam.
+    await page.click('.bin .segmented button[data-value="templates"]');
+    await page.evaluate(() => window.clipcraft.player.seek(2));
+    await page.click('.tpl-card[data-template="gold-number"]');
+    await page.waitForFunction(() => (window.clipcraft.store.project.overlays ?? []).length === 1, null, { timeout: 60000 });
+    let graphic = (await project()).overlays[0];
+    assert.equal(graphic.graphic.type, 'number');
+    assert.equal(graphic.region, 'top');
+    assert.equal(graphic.start, 2);
+    assert.ok(existsSync(graphic.path), 'the graphic video was written');
+    assert.ok(Math.abs(graphic.out - 4) < 0.1, `a graphic lasts 4s: ${graphic.out}`);
+    await page.fill('#graphic-value', '×7');
+    await page.click('#graphic-update');
+    await page.waitForFunction((old) => window.clipcraft.store.project.overlays[0].path !== old, graphic.path, { timeout: 60000 });
+    graphic = (await project()).overlays[0];
+    assert.equal(graphic.graphic.value, '×7');
+    assert.equal(graphic.start, 2, 'updating keeps the timing');
+    await page.click('.tpl-card[data-template="gold-captions"]');
+    proj = await project();
+    assert.ok(proj.texts.every((t) => t.caption && t.color === '#ef4444' && t.y === 0.5), 'captions turned red on the seam');
+    await page.evaluate(() => window.clipcraft.player.seek(3.4));
+    await page.waitForTimeout(1000);
+    await shot('13-gold-template');
+
     // Export: captions go through the shared text lanes.
     const output = p('captions.mp4');
     await app.evaluate(({ dialog }, out) => {
@@ -300,7 +324,12 @@ test('automatic captions from a (fake) ElevenLabs Scribe server', { skip: noDisp
     await page.selectOption('.modal-field:has-text("רזולוציה") select', '720');
     await page.click('#export-go');
     await page.waitForSelector('.modal h2:has-text("הייצוא הסתיים")', { timeout: 120000 });
-    if (shots) ff(['-ss', '2.6', '-i', output, '-frames:v', '1', path.join(shots, '12-captions-exported.png')]);
+    if (shots) ff(['-ss', '3.4', '-i', output, '-frames:v', '1', path.join(shots, '12-captions-exported.png')]);
+    // While the graphic is up, the top half is its dark background; the bottom is still the video.
+    const px = (y) => [...execFileSync(ffmpegPath(), ['-v', 'error', '-ss', '4', '-i', output, '-frames:v', '1',
+      '-vf', `crop=2:2:20:${y},format=rgb24`, '-f', 'rawvideo', '-'])].slice(0, 3);
+    assert.ok(px(150).every((c) => c < 50), `graphic background on top: ${px(150)}`);
+    assert.ok(Math.max(...px(1100)) > 100, `video at the bottom: ${px(1100)}`);
     assert.deepEqual(errors, []);
   } finally {
     await forgetCaptionsKey(app);

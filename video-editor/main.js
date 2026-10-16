@@ -2,12 +2,12 @@
 
 import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, safeStorage, shell } from 'electron';
 import { createReadStream, existsSync } from 'node:fs';
-import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { Readable } from 'node:stream';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { exportProject, extractAudio, probe } from './src/main/media.js';
+import { encodeFrames, exportProject, extractAudio, probe } from './src/main/media.js';
 import { transcribe } from './src/main/scribe.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -289,6 +289,26 @@ async function currentKey() {
   }
   return scribeKey;
 }
+
+// ---- generated graphics: renderer frames -> video in the app's data folder ----
+ipcMain.handle('graphics:encode', async (_e, { frames, fps, hold, name }) => {
+  const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'clipcraft-graphic-'));
+  try {
+    for (const [i, frame] of frames.entries()) {
+      await writeFile(path.join(tmpDir, `frame_${String(i).padStart(4, '0')}.jpg`), Buffer.from(frame));
+    }
+    const dir = path.join(app.getPath('userData'), 'graphics');
+    await mkdir(dir, { recursive: true });
+    const safe = String(name).replace(/[^a-z0-9-]/gi, '') || 'graphic';
+    const output = path.join(dir, `${safe}-${Date.now()}.mp4`);
+    await encodeFrames(tmpDir, { fps, hold }, output);
+    const item = await probe(output);
+    allowMedia([output]);
+    return item;
+  } finally {
+    rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  }
+});
 
 ipcMain.handle('captions:keyStatus', async () => ({
   hasKey: Boolean(await currentKey()),

@@ -5,14 +5,16 @@ import {
   ASPECTS, clipDuration, effectiveTransition, formatTime, layoutClips, MIN_CLIP_DURATION, OVERLAY_REGIONS,
   overlayDuration, sourceTime, SPEEDS, totalDuration, TRANSITIONS,
 } from '../../shared/timeline.js';
-import { actions } from '../actions.js';
-import { player, store, useStore } from '../state.js';
+import { useState } from 'react';
+import { actions, updateGraphic } from '../actions.js';
+import { GRAPHIC_TYPES } from '../../shared/graphics.js';
+import { player, store, ui, useAtom, useStore } from '../state.js';
 import { FONTS, TEXT_STYLES } from '../text-render.js';
 import { PALETTE } from '../../shared/templates.js';
 import { CAPTION_LOOK } from '../../shared/captions.js';
 import { toast } from '../toast.js';
 import {
-  Button, CheckField, ColorField, NumberField, RangeField, Section, Segmented, SelectField,
+  Button, CheckField, ColorField, NumberField, RangeField, Row, Section, Segmented, SelectField,
 } from './controls.jsx';
 
 // Live edit of the selected object (undo/redo replaces objects, so look it up).
@@ -149,6 +151,56 @@ function ClipPanel({ clip }) {
   );
 }
 
+// Content of a generated black-and-gold graphic; "update" re-renders its video.
+function GraphicContent({ overlay }) {
+  const busy = useAtom(ui.graphicBusy);
+  const [draft, setDraft] = useState(overlay.graphic);
+  const g = draft;
+  const set = (k) => (e) => {
+    const v = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    setDraft((d) => ({ ...d, [k]: v }));
+  };
+  const field = (label, k, extra = {}) => (
+    <Row label={label}>
+      <input className="graphic-field" dir="auto" value={g[k] ?? ''} onChange={set(k)} {...extra} />
+    </Row>
+  );
+  const changed = JSON.stringify(draft) !== JSON.stringify(overlay.graphic);
+  return (
+    <Section title={`תוכן: ${GRAPHIC_TYPES[g.type]?.name ?? 'גרפיקה'}`}>
+      {field('כותרת', 'label', { id: 'graphic-label' })}
+      {g.type === 'number' && field('המספר', 'value', { id: 'graphic-value', dir: 'ltr' })}
+      {g.type === 'number' && field('הערה', 'note')}
+      {g.type === 'bars' && (
+        <>
+          <textarea id="graphic-values" className="graphic-values" rows={4} value={g.values} onChange={set('values')}
+            placeholder={'2024: 4\n2025: 9'} />
+          <div className="insp-note">שורה לכל עמודה: תווית, נקודתיים וערך.</div>
+          {field('לפני הערך', 'prefix', { dir: 'ltr' })}
+          {field('אחרי הערך', 'suffix', { dir: 'ltr' })}
+        </>
+      )}
+      {g.type !== 'year' && (
+        <label className="insp-check">
+          <input type="checkbox" checked={Boolean(g.years)} onChange={set('years')} />
+          <span>ציר שנים למעלה</span>
+        </label>
+      )}
+      {(g.years || g.type === 'year') && (
+        <>
+          {field('משנה', 'from', { type: 'number' })}
+          {field('עד שנה', 'to', { type: 'number' })}
+          {field('השנה המודגשת', 'active', { type: 'number', id: 'graphic-active' })}
+        </>
+      )}
+      <div className="btn-row">
+        <Button id="graphic-update" variant={changed ? 'primary' : ''} disabled={busy || !changed}
+          onClick={() => updateGraphic(overlay.id, draft)}>{busy ? 'מעדכן…' : 'עדכון הגרפיקה'}</Button>
+      </div>
+    </Section>
+  );
+}
+
 function OverlayPanel({ overlay }) {
   const isImage = overlay.kind === 'image';
   const split = overlay.region !== 'full';
@@ -161,6 +213,8 @@ function OverlayPanel({ overlay }) {
         <strong dir="auto">{overlay.name}</strong>
         <span>{info}</span>
       </div>
+
+      {overlay.graphic && <GraphicContent key={overlay.path} overlay={overlay} />}
 
       <Section title="מסך מפוצל">
         <Segmented value={overlay.region} options={OVERLAY_REGIONS}
