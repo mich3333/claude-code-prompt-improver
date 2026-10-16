@@ -10,6 +10,8 @@ import { WeeklyAI, type WeeklyProps } from './WeeklyAI';
 import { estimateWords, SCRIPT_2026 } from './captions';
 import { YEAR_DURATION, Year2026, type YearProps } from './Year2026';
 import { NEWS_SCRIPT, NewsCast, type NewsProps } from './NewsCast';
+import { Versus, versusDuration, type VersusProps } from './Versus';
+import { MATCHES } from './versus';
 
 const defaults: WeeklyProps = {
   avatar: null,
@@ -82,6 +84,17 @@ export const RemotionRoot: React.FC = () => (
       height={H}
       defaultProps={{ voice: null, words: estimateWords(NEWS_SCRIPT.map((l) => l.text), { start: 1.2, pause: 0.6 }), anchor: null } as NewsProps}
       calculateMetadata={newsMetadata}
+    />
+    {/* Head-to-head episodes; pick one with --props='{"match":"openai-anthropic"}'. */}
+    <Composition
+      id="Versus"
+      component={Versus}
+      durationInFrames={300}
+      fps={FPS}
+      width={W}
+      height={H}
+      defaultProps={{ match: 'openai-anthropic', voice: null } as VersusProps}
+      calculateMetadata={({ props }: { props: VersusProps }) => ({ durationInFrames: versusDuration(MATCHES[props.match]) })}
     />
   </>
 );
