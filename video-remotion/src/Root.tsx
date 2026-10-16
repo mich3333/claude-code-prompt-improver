@@ -123,10 +123,16 @@ export const RemotionRoot: React.FC = () => (
       defaultProps={
         {
           face: 'demos/ai-news.mp4',
-          second: 'demos/openai-vs-anthropic.mp4',
-          words: estimateWords(['היי, רוצים לראות משהו?', 'Claude, תפצל את המסך לשניים.', 'הנה, עכשיו רואים את שניהם.'], { start: 0.4, pause: 0.4 }),
-          trigger: 'לשניים',
-          durationSec: 9,
+          words: estimateWords(
+            ['היי, בואו נשחק.', 'Claude, תראה לי שאני הולך ימינה.', 'Claude, אני מחזיק כדור ביד.', 'ועכשיו, Claude, תפצל את המסך לשניים.', 'הנה.'],
+            { start: 0.4, pause: 0.9 },
+          ),
+          cues: [
+            { effect: 'walk', trigger: 'ימינה' },
+            { effect: 'ball', trigger: 'ביד', x: 72, y: 66 },
+            { effect: 'split', trigger: 'לשניים', second: 'demos/openai-vs-anthropic.mp4' },
+          ],
+          durationSec: 15,
         } as VoiceSplitProps
       }
       calculateMetadata={({ props }: { props: VoiceSplitProps }) => ({ durationInFrames: Math.ceil(props.durationSec * FPS) })}

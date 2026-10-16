@@ -3,29 +3,37 @@ import { AbsoluteFill, Img, OffthreadVideo, Sequence, interpolate, spring, stati
 import type { Word } from './captions';
 import { COLORS, H, W } from './ui';
 
-// A selfie video that splits on a spoken cue: full screen until the presenter
-// says the trigger (e.g. "Claude, תפצל את המסך לשניים"), then a gold line
-// sweeps across, the face moves to the top half and the second clip slides
-// into the bottom half. Word-timed captions sit on the dividing line.
+// A selfie video that reacts to spoken commands. Each cue fires when a word
+// containing its trigger ends:
+// - split: a gold line sweeps across, the face moves to the top half and a
+//   second clip slides into the bottom half (stays to the end);
+// - walk: the frame steps to the right with a walking sway, speed lines and
+//   footprints crossing left to right, then settles back;
+// - ball: a basketball drops in and bounces into the hand at (x, y), given as
+//   percentages of the presenter's frame, and stays there.
+// Word-timed captions run along the bottom, or on the divider after a split.
+
+export type Cue =
+  | { effect: 'split'; trigger: string; second: string }
+  | { effect: 'walk'; trigger: string }
+  | { effect: 'ball'; trigger: string; x: number; y: number };
 
 export type VoiceSplitProps = {
   /** The presenter's video in public/, e.g. "face.mp4". Its own sound is used. */
   face: string;
-  /** What fills the bottom half: a video or image in public/. */
-  second: string;
   /** Word timings from the transcript. */
   words: Word[];
-  /** The split happens when a word containing this text ends. */
-  trigger: string;
+  cues: Cue[];
   /** Length of the face video in seconds. */
   durationSec: number;
 };
 
 const clamp = { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' } as const;
 const HALF = H / 2;
+const WALK = 48;
 const isVideo = (src: string) => /\.(mp4|webm|mov)$/i.test(src);
 
-export const splitFrame = (words: Word[], trigger: string, fps: number) => {
+export const cueFrame = (words: Word[], trigger: string, fps: number) => {
   const w = words.find((x) => x.text.includes(trigger));
   return w ? Math.round(w.end * fps) : null;
 };
@@ -56,34 +64,108 @@ const CaptionLine: React.FC<{ words: Word[]; top: number }> = ({ words, top }) =
   );
 };
 
-export const VoiceSplit: React.FC<VoiceSplitProps> = ({ face, second, words, trigger }) => {
+const Basketball: React.FC<{ size: number; spin: number }> = ({ size, spin }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" style={{ transform: `rotate(${spin}deg)`, filter: 'drop-shadow(0 14px 18px rgba(0,0,0,0.5))' }}>
+    <defs>
+      <radialGradient id="ball" cx="35%" cy="30%" r="75%">
+        <stop offset="0" stopColor="#f6a04d" />
+        <stop offset="1" stopColor="#c45a14" />
+      </radialGradient>
+    </defs>
+    <circle cx={50} cy={50} r={47} fill="url(#ball)" stroke="#2a1508" strokeWidth={2.5} />
+    <path d="M3 50 H97 M50 3 V97 M17 17 C 37 37, 37 63, 17 83 M83 17 C 63 37, 63 63, 83 83" fill="none" stroke="#2a1508" strokeWidth={2.5} />
+  </svg>
+);
+
+// Footprints stepping left to right along the bottom of the frame.
+const Footprints: React.FC<{ f: number; top: number }> = ({ f, top }) => (
+  <>
+    {new Array(7).fill(0).map((_, k) => {
+      const appear = k * 5;
+      const o = interpolate(f, [appear, appear + 3, appear + 18, appear + 26], [0, 1, 1, 0], clamp);
+      return (
+        <div key={k} style={{ position: 'absolute', left: 90 + k * 140, top: top + (k % 2 ? 40 : 0), opacity: o, transform: 'rotate(90deg)', zIndex: 3 }}>
+          <svg width={60} height={90} viewBox="0 0 40 60">
+            <ellipse cx={20} cy={24} rx={12} ry={18} fill={COLORS.gold} />
+            <ellipse cx={20} cy={50} rx={8} ry={8} fill={COLORS.gold} />
+          </svg>
+        </div>
+      );
+    })}
+  </>
+);
+
+export const VoiceSplit: React.FC<VoiceSplitProps> = ({ face, words, cues }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const at = splitFrame(words, trigger, fps) ?? Number.POSITIVE_INFINITY;
-  const p = interpolate(frame, [at, at + 14], [0, 1], { ...clamp, easing: (x) => 1 - Math.pow(1 - x, 3) });
-  const line = interpolate(frame, [at - 4, at + 6], [0, 1], clamp);
-  const flash = interpolate(frame, [at, at + 3, at + 12], [0, 0.5, 0], clamp);
+  const at = (c: Cue) => cueFrame(words, c.trigger, fps) ?? Number.POSITIVE_INFINITY;
+
+  const split = cues.find((c): c is Extract<Cue, { effect: 'split' }> => c.effect === 'split');
+  const splitAt = split ? at(split) : Number.POSITIVE_INFINITY;
+  const p = interpolate(frame, [splitAt, splitAt + 14], [0, 1], { ...clamp, easing: (x) => 1 - Math.pow(1 - x, 3) });
+  const line = interpolate(frame, [splitAt - 4, splitAt + 6], [0, 1], clamp);
   const faceH = H - p * HALF;
+
+  // Walking: step right with a sway, then spring back.
+  const walks = cues.filter((c) => c.effect === 'walk').map(at);
+  const walkAt = walks.filter((a) => frame >= a && frame < a + WALK + 30).pop();
+  let dx = 0;
+  let sway = 0;
+  if (walkAt !== undefined) {
+    const f = frame - walkAt;
+    const out = interpolate(f, [0, WALK], [0, 1], clamp);
+    const back = spring({ frame: f - WALK, fps, config: { damping: 14, stiffness: 120, mass: 0.8 } });
+    dx = out * 180 * (1 - back);
+    sway = f < WALK ? Math.sin(f / 2.2) * 3 : 0;
+  }
+
+  const balls = cues.filter((c): c is Extract<Cue, { effect: 'ball' }> => c.effect === 'ball');
+  const flash = interpolate(frame, [splitAt, splitAt + 3, splitAt + 12], [0, 0.5, 0], clamp);
+
   return (
     <AbsoluteFill style={{ background: '#000', fontFamily: 'Rubik, sans-serif' }}>
       {/* Presenter: full frame, then the top half */}
       <div style={{ position: 'absolute', left: 0, top: 0, width: W, height: faceH, overflow: 'hidden' }}>
-        <OffthreadVideo src={staticFile(face)} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 30%' }} />
+        <div style={{ position: 'absolute', inset: -60, transform: `translateX(${dx}px) rotate(${sway}deg) scale(${1 + Math.abs(sway) * 0.004})` }}>
+          <OffthreadVideo src={staticFile(face)} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 30%' }} />
+        </div>
+        {walkAt !== undefined && frame - walkAt < WALK && (
+          <>
+            {[0, 1, 2, 3, 4, 5].map((k) => {
+              const f = frame - walkAt;
+              const x = ((f * 40 + k * 230) % (W + 300)) - 300;
+              return <div key={k} style={{ position: 'absolute', left: W - x, top: 200 + k * (faceH / 7), width: 260, height: 6, borderRadius: 3, background: 'rgba(247,220,147,0.7)', opacity: interpolate(f, [0, 6, WALK - 8, WALK], [0, 1, 1, 0], clamp) }} />;
+            })}
+            <Footprints f={frame - walkAt} top={faceH - 260} />
+          </>
+        )}
+        {balls.map((b, k) => {
+          const a = at(b);
+          if (frame < a) return null;
+          const f = frame - a;
+          const drop = spring({ frame: f, fps, config: { damping: 6, stiffness: 120, mass: 0.9 } });
+          const size = 230;
+          const y = (b.y / 100) * faceH - size / 2;
+          return (
+            <div key={k} style={{ position: 'absolute', left: (b.x / 100) * W - size / 2 + dx, top: -size + drop * (y + size) + Math.sin(f / 9) * 4 * (f > 30 ? 1 : 0), zIndex: 3 }}>
+              <Basketball size={size} spin={f * 4 * (1 - Math.min(1, f / 40)) + 20} />
+            </div>
+          );
+        })}
       </div>
-      {/* Second half slides up from below once the cue is spoken */}
-      {Number.isFinite(at) && (
+      {/* Second half slides up from below once the split cue is spoken */}
+      {split && Number.isFinite(splitAt) && (
         <div style={{ position: 'absolute', left: 0, top: HALF + (1 - p) * HALF, width: W, height: HALF, overflow: 'hidden', background: '#0d0b08' }}>
-          {isVideo(second) ? (
-            <Sequence from={at} layout="none">
-              <OffthreadVideo src={staticFile(second)} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          {isVideo(split.second) ? (
+            <Sequence from={splitAt} layout="none">
+              <OffthreadVideo src={staticFile(split.second)} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </Sequence>
           ) : (
-            <Img src={staticFile(second)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <Img src={staticFile(split.second)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           )}
         </div>
       )}
-      {/* The gold line sweeps across, then becomes the divider */}
-      {Number.isFinite(at) && (
+      {split && Number.isFinite(splitAt) && (
         <div
           style={{
             position: 'absolute',
@@ -98,7 +180,7 @@ export const VoiceSplit: React.FC<VoiceSplitProps> = ({ face, second, words, tri
         />
       )}
       <AbsoluteFill style={{ background: '#fff', opacity: flash, pointerEvents: 'none' }} />
-      <CaptionLine words={words} top={frame >= at ? HALF : H - 420} />
+      <CaptionLine words={words} top={frame >= splitAt ? HALF : H - 420} />
     </AbsoluteFill>
   );
 };
