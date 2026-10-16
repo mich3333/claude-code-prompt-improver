@@ -1,13 +1,14 @@
 // Electron main process: window, menus, file dialogs, media probing, export.
 
-import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, safeStorage, shell } from 'electron';
 import { createReadStream, existsSync } from 'node:fs';
-import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { Readable } from 'node:stream';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { exportProject, probe } from './src/main/media.js';
+import { encodeFrames, exportProject, extractAudio, probe } from './src/main/media.js';
+import { transcribe } from './src/main/scribe.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -263,6 +264,98 @@ ipcMain.handle('export:start', async (_e, { project, opts, texts }) => {
 });
 
 ipcMain.handle('export:cancel', () => exportJob?.abort());
+
+// ---- automatic captions (ElevenLabs Scribe) ----
+// The API key stays in the main process; on disk it is encrypted with the OS
+// keychain (safeStorage) and only when the user asks to remember it.
+let scribeKey = null;
+let captionJob = null;
+const keyFile = () => path.join(app.getPath('userData'), 'elevenlabs-key.bin');
+const canSaveKey = () => {
+  try {
+    return safeStorage.isEncryptionAvailable();
+  } catch {
+    return false;
+  }
+};
+
+async function currentKey() {
+  if (!scribeKey && canSaveKey() && existsSync(keyFile())) {
+    try {
+      scribeKey = safeStorage.decryptString(await readFile(keyFile()));
+    } catch {
+      scribeKey = null; // unreadable (e.g. keychain changed): ask again
+    }
+  }
+  return scribeKey;
+}
+
+// ---- generated graphics: renderer frames -> video in the app's data folder ----
+ipcMain.handle('graphics:encode', async (_e, { frames, fps, hold, name }) => {
+  const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'clipcraft-graphic-'));
+  try {
+    for (const [i, frame] of frames.entries()) {
+      await writeFile(path.join(tmpDir, `frame_${String(i).padStart(4, '0')}.jpg`), Buffer.from(frame));
+    }
+    const dir = path.join(app.getPath('userData'), 'graphics');
+    await mkdir(dir, { recursive: true });
+    const safe = String(name).replace(/[^a-z0-9-]/gi, '') || 'graphic';
+    const output = path.join(dir, `${safe}-${Date.now()}.mp4`);
+    await encodeFrames(tmpDir, { fps, hold }, output);
+    const item = await probe(output);
+    allowMedia([output]);
+    return item;
+  } finally {
+    rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  }
+});
+
+ipcMain.handle('captions:keyStatus', async () => ({
+  hasKey: Boolean(await currentKey()),
+  saved: existsSync(keyFile()),
+  canSave: canSaveKey(),
+}));
+
+ipcMain.handle('captions:setKey', async (_e, { key, remember }) => {
+  scribeKey = String(key ?? '').trim() || null;
+  if (remember && scribeKey && canSaveKey()) await writeFile(keyFile(), safeStorage.encryptString(scribeKey));
+  else await rm(keyFile(), { force: true });
+  return { hasKey: Boolean(scribeKey) };
+});
+
+ipcMain.handle('captions:forgetKey', async () => {
+  scribeKey = null;
+  await rm(keyFile(), { force: true });
+});
+
+ipcMain.handle('captions:run', async (_e, { sources, language }) => {
+  if (captionJob) return { ok: false, error: 'תמלול אחר כבר רץ.' };
+  const apiKey = await currentKey();
+  if (!apiKey) return { ok: false, error: 'חסר מפתח API של ElevenLabs.' };
+  // Only files the user imported may be read and sent.
+  if (sources.some((s) => !allowedMedia.has(path.resolve(s.path)))) return { ok: false, error: 'קובץ שלא יובא לעורך.' };
+  const controller = new AbortController();
+  captionJob = controller;
+  const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'clipcraft-captions-'));
+  try {
+    const results = [];
+    for (const [index, source] of sources.entries()) {
+      send('captions:progress', { index, total: sources.length, stage: 'audio' });
+      const file = await extractAudio(source, path.join(tmpDir, `audio_${index}.mp3`), { signal: controller.signal });
+      send('captions:progress', { index, total: sources.length, stage: 'transcribe' });
+      const { words, language: detected } = await transcribe(file, { apiKey, language, signal: controller.signal });
+      results.push({ id: source.id, words, language: detected });
+    }
+    return { ok: true, results };
+  } catch (e) {
+    return { ok: false, cancelled: Boolean(e.cancelled || controller.signal.aborted), error: e.message };
+  } finally {
+    captionJob = null;
+    rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  }
+});
+
+ipcMain.handle('captions:cancel', () => captionJob?.abort());
 
 ipcMain.handle('shell:show', (_e, p) => shell.showItemInFolder(p));
 

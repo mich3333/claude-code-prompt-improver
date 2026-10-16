@@ -5,6 +5,9 @@ import {
   totalDuration,
 } from '../shared/timeline.js';
 import { applyTemplate, TEMPLATES } from '../shared/templates.js';
+import { CAPTION_LOOKS } from '../shared/captions.js';
+import { createGraphic, GRAPHIC_TYPES } from '../shared/graphics.js';
+import { renderGraphicVideo } from './graphics.js';
 import { isTyping, player, store, timelineApi, ui } from './state.js';
 import { toast } from './toast.js';
 
@@ -63,6 +66,79 @@ export function addOverlay(media, start = null) {
   });
   store.select({ type: 'overlay', id: overlay.id });
   player.seek(Math.max(at, Math.min(player.time, at + overlayDuration(overlay) - 0.05)));
+}
+
+// Black-and-gold data graphic as a split-screen layer at the playhead.
+export async function addGraphic(type) {
+  if (ui.graphicBusy.get()) return;
+  const g = createGraphic(type);
+  const total = totalDuration(store.project);
+  const at = player.time < total - 0.2 ? player.time : 0;
+  player.pause();
+  ui.graphicBusy.set(true);
+  try {
+    const item = await renderGraphicVideo(g, store.project.aspect);
+    const overlay = {
+      ...createOverlay(item, at), name: GRAPHIC_TYPES[type].name, feather: 0.1, graphic: g,
+      ...(GRAPHIC_TYPES[type].full ? { region: 'full' } : {}),
+    };
+    store.update((p) => {
+      p.media.push({ ...item, id: newId('media'), name: GRAPHIC_TYPES[type].name });
+      p.overlays ??= [];
+      p.overlays.push(overlay);
+    });
+    store.select({ type: 'overlay', id: overlay.id });
+    player.seek(Math.min(at + 2, at + overlayDuration(overlay) - 0.05));
+    toast(`${GRAPHIC_TYPES[type].name} נוסף. את התוכן עורכים בפאנל ההגדרות.`, 'success', 3500);
+  } catch (e) {
+    toast(`לא הצלחנו ליצור את הגרפיקה: ${e.message}`, 'error', 8000);
+  } finally {
+    ui.graphicBusy.set(false);
+  }
+}
+
+// Re-renders a graphic layer with new content, keeping its timing and placement.
+export async function updateGraphic(overlayId, g) {
+  if (ui.graphicBusy.get()) return;
+  const aspect = store.project.aspect;
+  ui.graphicBusy.set(true);
+  try {
+    const item = await renderGraphicVideo(g, aspect);
+    store.update((p) => {
+      const o = p.overlays.find((x) => x.id === overlayId);
+      if (!o) return;
+      const media = p.media.find((m) => m.path === o.path);
+      if (media) Object.assign(media, { path: item.path, url: item.url, thumbnail: item.thumbnail, duration: item.duration });
+      Object.assign(o, {
+        path: item.path, url: item.url, thumbnail: item.thumbnail, sourceDuration: item.duration,
+        width: item.width, height: item.height, in: 0, out: item.duration, graphic: { ...g },
+      });
+    });
+    player.seek(player.time);
+  } catch (e) {
+    toast(`לא הצלחנו לעדכן את הגרפיקה: ${e.message}`, 'error', 8000);
+  } finally {
+    ui.graphicBusy.set(false);
+  }
+}
+
+// Red captions on the seam: restyles existing captions and makes red the default look.
+export function redCaptions() {
+  try {
+    const s = JSON.parse(localStorage.getItem('clipcraft.captions') || '{}');
+    localStorage.setItem('clipcraft.captions', JSON.stringify({ ...s, look: 'red' }));
+  } catch {
+    // remembered settings are a convenience only
+  }
+  const captions = store.project.texts.filter((t) => t.caption);
+  if (!captions.length) {
+    toast('אין עדיין כתוביות. לחצו על ״כתוביות״ בסרגל העליון, והן ייצאו בסגנון הזה.', 'info', 5000);
+    return;
+  }
+  store.update((p) => p.texts.forEach((t) => {
+    if (t.caption) Object.assign(t, CAPTION_LOOKS.red.look, { y: 0.5 });
+  }));
+  toast(`${captions.length} כתוביות עברו לסגנון האדום.`, 'success', 3000);
 }
 
 export const actions = {
@@ -207,6 +283,15 @@ export const actions = {
       store.markSaved(filePath);
       toast('הפרויקט נשמר', 'success', 2500);
     }
+  },
+
+  captions() {
+    if (!store.project.clips.length) {
+      toast('הוסיפו קודם סרטון שמדברים בו.', 'warn');
+      return;
+    }
+    player.pause();
+    ui.captionsOpen.set(true);
   },
 
   export() {

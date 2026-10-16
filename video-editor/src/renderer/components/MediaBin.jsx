@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { formatTime } from '../../shared/timeline.js';
 import { TEMPLATES } from '../../shared/templates.js';
-import { actions, addMediaToTimeline, addOverlay } from '../actions.js';
+import { actions, addGraphic, addMediaToTimeline, addOverlay, redCaptions } from '../actions.js';
+import { GOLD, GRAPHIC_TYPES } from '../../shared/graphics.js';
 import { enter, exit } from '../motion.js';
-import { store, useStore } from '../state.js';
+import { store, ui, useAtom, useStore } from '../state.js';
 import { Icon } from './Icon.jsx';
 import { IconButton, Segmented } from './controls.jsx';
 
@@ -55,10 +56,50 @@ function MediaList() {
   );
 }
 
+// Mini previews of the black-and-gold graphics.
+function GoldPreview({ type }) {
+  if (type === 'bars') {
+    return (
+      <span className="gold-bars">
+        {[30, 55, 75, 100].map((h) => <span key={h} style={{ height: `${h}%` }} />)}
+      </span>
+    );
+  }
+  if (type === 'year') return <span className="gold-year">2021</span>;
+  if (type === 'quote') return <span className="gold-quote"><span /><span /><span /></span>;
+  if (type === 'captions') return <span className="gold-caption">ככה זה מתחיל</span>;
+  return <span className="gold-number">$2T</span>;
+}
+
+function GoldTemplates() {
+  const busy = useAtom(ui.graphicBusy);
+  const items = [
+    ...Object.entries(GRAPHIC_TYPES).map(([id, t]) => ({ id, name: t.name, description: t.description, run: () => addGraphic(id) })),
+    { id: 'captions', name: 'כתוביות אדומות', description: 'כתוביות אדומות על קו החיבור של המסך המפוצל', run: redCaptions },
+  ];
+  return (
+    <>
+      <p className="tpl-intro tpl-group">שחור וזהב · בסגנון הרפרנס: גרפיקה למעלה, אתם למטה.</p>
+      {items.map((t) => (
+        <button key={t.id} type="button" className="tpl-card" data-template={`gold-${t.id}`} disabled={busy} onClick={t.run}>
+          <span className="tpl-preview gold-preview" style={{ background: GOLD.bg }}>
+            <GoldPreview type={t.id} />
+          </span>
+          <span className="tpl-meta">
+            <span className="tpl-name">{t.name}</span>
+            <span className="tpl-desc">{busy && t.id !== 'captions' ? 'יוצר גרפיקה…' : t.description}</span>
+          </span>
+        </button>
+      ))}
+    </>
+  );
+}
+
 function TemplateList() {
   return (
     <div className="tpl-list">
-      <p className="tpl-intro">בסגנון Claude: שמנת חמימה, טרקוטה, סריף עריכתי ותנועה רגועה.</p>
+      <GoldTemplates />
+      <p className="tpl-intro tpl-group">בהיר וחמים · בסגנון Claude: שמנת חמימה, טרקוטה, סריף עריכתי ותנועה רגועה.</p>
       {TEMPLATES.map((t) => (
         <button key={t.id} type="button" className="tpl-card" data-template={t.id} onClick={() => actions.applyTemplate(t.id)}>
           <span className="tpl-preview" style={{ background: t.preview.bg }}>

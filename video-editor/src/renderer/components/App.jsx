@@ -7,6 +7,7 @@ import { actions, addMediaItems } from '../actions.js';
 import { enter, exit } from '../motion.js';
 import { isTyping, player, store, timelineApi, ui, useAtom, useStore } from '../state.js';
 import { Button, IconButton } from './controls.jsx';
+import { CaptionsDialog } from './CaptionsDialog.jsx';
 import { ExportDialog } from './ExportDialog.jsx';
 import { Inspector } from './Inspector.jsx';
 import { MediaBin } from './MediaBin.jsx';
@@ -31,6 +32,8 @@ function Toolbar() {
         <Button id="btn-import" icon="film" onClick={actions.importMedia} title="ייבוא סרטונים ותמונות (Ctrl+I)">ייבוא מדיה</Button>
         <Button id="btn-text" icon="text" onClick={actions.addText} title="הוספת טקסט בסמן הניגון (T)">הוספת טקסט</Button>
         <Button id="btn-music" icon="music" onClick={actions.addMusic} title="הוספת מוזיקת רקע (Ctrl+M)">הוספת מוזיקה</Button>
+        <Button id="btn-captions" icon="captions" onClick={actions.captions} disabled={!store.project.clips.length}
+          title="כתוביות אוטומטיות מהדיבור בסרטון">כתוביות</Button>
       </div>
       <div className="tool-group">
         <IconButton id="btn-undo" icon="undo" label="ביטול (Ctrl+Z)" disabled={!canUndo} onClick={() => store.undo()} />
@@ -66,7 +69,7 @@ function DropOverlay() {
 function useGlobalHandlers() {
   useEffect(() => {
     const onKey = (e) => {
-      if (ui.exportOpen.get()) return;
+      if (ui.exportOpen.get() || ui.captionsOpen.get()) return;
       if (e.key === 'Escape') {
         if (isTyping()) document.activeElement.blur();
         else store.select(null);
@@ -150,6 +153,7 @@ export function App() {
       </main>
       <Timeline />
       <ExportDialog />
+      <CaptionsDialog />
       <DropOverlay />
       <Toaster />
     </>

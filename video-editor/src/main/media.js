@@ -103,14 +103,43 @@ export async function probe(file) {
  * Render a project. `texts` are { png: Buffer, start, end, fade } items.
  * Calls onProgress(0..1). Rejects with { cancelled: true } on abort.
  */
+// Mono speech-quality MP3 of one clip's source range, for transcription.
+export async function extractAudio(source, output, { signal } = {}) {
+  await run(ffmpegPath(), [
+    '-hide_banner', '-v', 'error', '-y',
+    '-ss', String(source.in), '-t', String(Math.max(0.1, source.out - source.in)), '-i', source.path,
+    '-vn', '-ac', '1', '-ar', '16000', '-c:a', 'libmp3lame', '-b:a', '64k', output,
+  ], { signal });
+  return output;
+}
+
+// Numbered JPEG frames (frame_0000.jpg, ...) -> H.264 video that holds the
+// last frame for `hold` more seconds (used for the generated graphics).
+export async function encodeFrames(dir, { fps, hold }, output) {
+  await run(ffmpegPath(), [
+    '-hide_banner', '-v', 'error', '-y',
+    '-framerate', String(fps), '-i', path.join(dir, 'frame_%04d.jpg'),
+    '-vf', `tpad=stop_mode=clone:stop_duration=${Math.max(0, hold)},format=yuv420p`,
+    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '17', '-movflags', '+faststart', output,
+  ]);
+  return output;
+}
+
 export async function exportProject(project, opts, { tmpDir, texts = [], onProgress, signal }) {
   const textInputs = [];
   for (let i = 0; i < texts.length; i++) {
     const p = path.join(tmpDir, `text_${i}.png`);
     await writeFile(p, texts[i].png);
-    textInputs.push({ path: p, start: texts[i].start, end: texts[i].end, fade: texts[i].fade });
+    textInputs.push({ path: p, start: texts[i].start, end: texts[i].end, fade: texts[i].fade, rise: texts[i].rise });
   }
-  const { inputs, filter, outputArgs, duration } = buildExport(project, { ...opts, textInputs });
+  // Still texts (e.g. captions) share a few concat inputs and need a transparent gap frame.
+  const blankPath = path.join(tmpDir, 'blank.png');
+  const { inputs, filter, outputArgs, duration, files } = buildExport(project, { ...opts, textInputs, workDir: tmpDir, blankPath });
+  if (files.length) {
+    await run(ffmpegPath(), ['-hide_banner', '-v', 'error', '-y', '-f', 'lavfi',
+      '-i', `color=c=black@0.0:s=${opts.width}x${opts.height},format=rgba`, '-frames:v', '1', blankPath], { signal });
+    for (const f of files) await writeFile(f.path, f.content);
+  }
   const filterFile = path.join(tmpDir, 'filter.txt');
   await writeFile(filterFile, filter);
   const args = [

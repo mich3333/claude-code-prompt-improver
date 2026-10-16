@@ -5,7 +5,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { createServer } from 'node:http';
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -186,3 +187,159 @@ test('edit and export a video through the UI', { skip: noDisplay && 'no display 
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('automatic captions from a (fake) ElevenLabs Scribe server', { skip: noDisplay && 'no display (use xvfb-run)', timeout: 180000 }, async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'clipcraft-e2e-'));
+  const p = (n) => path.join(dir, n);
+  ff(['-f', 'lavfi', '-i', 'testsrc2=s=720x1280:r=30:d=4', '-f', 'lavfi', '-i', 'sine=f=330:d=4',
+    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', p('talk.mp4')]);
+  ff(['-f', 'lavfi', '-i', 'testsrc=s=720x1280:r=30:d=2', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', p('silent.mp4')]);
+  if (shots) mkdirSync(shots, { recursive: true });
+
+  // Stand-in for api.elevenlabs.io: records requests, answers with word timings.
+  const requests = [];
+  let reply = 'ok';
+  const server = createServer((req, res) => {
+    const chunks = [];
+    req.on('data', (c) => chunks.push(c));
+    req.on('end', () => {
+      requests.push({ headers: req.headers, body: Buffer.concat(chunks) });
+      if (reply === 'unauthorized') {
+        res.writeHead(401, { 'content-type': 'application/json' }).end('{"detail":{"message":"Invalid API key"}}');
+        return;
+      }
+      const words = [['היום', 0.2, 0.5], ['אני', 0.55, 0.7], ['מראה', 0.75, 1.0], ['לכם', 1.05, 1.3], ['משהו!', 1.35, 1.8]]
+        .flatMap(([text, start, end]) => [{ text, start, end, type: 'word' }, { text: ' ', start: end, end, type: 'spacing' }]);
+      res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ language_code: 'heb', text: '', words }));
+    });
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const url = `http://127.0.0.1:${server.address().port}/v1/speech-to-text`;
+
+  const app = await electron.launch({
+    executablePath: electronBin,
+    args: [...(process.platform === 'linux' ? ['--no-sandbox'] : []), root],
+    env: { ...process.env, CLIPCRAFT_SCRIBE_URL: url },
+  });
+  const errors = [];
+  try {
+    const page = await app.firstWindow();
+    page.on('pageerror', (e) => errors.push(e.message));
+    page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+    await page.waitForSelector('#btn-import');
+    const project = () => page.evaluate(() => JSON.parse(JSON.stringify(window.clipcraft.store.project)));
+    const shot = async (name) => shots && page.screenshot({ path: path.join(shots, `${name}.png`) });
+    await page.evaluate(() => window.api.forgetCaptionsKey());
+    await app.evaluate(({ dialog }, f) => {
+      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: f });
+    }, [p('silent.mp4'), p('talk.mp4')]);
+    await page.click('#btn-import');
+    await page.waitForFunction(() => window.clipcraft.store.project.clips.length === 2);
+    await page.selectOption('#aspect', '9:16');
+
+    // Enter a key (not remembered), pick Hebrew, generate.
+    await page.click('#btn-captions');
+    await page.fill('#captions-key', 'sk_test_123');
+    if (await page.locator('#captions-remember').count()) await page.uncheck('#captions-remember');
+    await page.click('#captions-key-save');
+    await page.waitForSelector('#captions-go:not([disabled])');
+    await page.selectOption('#captions-language', 'heb');
+    assert.match(await page.textContent('.modal'), /1 קליפ עם סאונד/);
+    await shot('10-captions-dialog');
+    await page.click('#captions-go');
+    await page.waitForFunction(() => window.clipcraft.store.project.texts.some((t) => t.caption));
+
+    assert.equal(requests.length, 1, 'only the clip with sound is sent');
+    const req = requests[0];
+    assert.equal(req.headers['xi-api-key'], 'sk_test_123');
+    const body = req.body.toString('latin1');
+    assert.match(body, /name="model_id"\r\n\r\nscribe_v2/);
+    assert.match(body, /name="language_code"\r\n\r\nheb/);
+    assert.match(body, /name="timestamps_granularity"\r\n\r\nword/);
+    assert.ok(req.body.length > 5000, `audio was uploaded (${req.body.length} bytes)`);
+
+    // The talking clip starts after the 2s silent clip, so captions start at 2.2s.
+    let proj = await project();
+    const caps = proj.texts.filter((t) => t.caption);
+    assert.deepEqual(caps.map((t) => t.text), ['היום אני מראה', 'לכם משהו!']);
+    assert.ok(Math.abs(caps[0].start - 2.2) < 0.01, `first caption at ${caps[0].start}`);
+    assert.equal(caps[0].end, caps[1].start);
+
+    // One undo step removes all captions; redo brings them back.
+    await page.click('#btn-undo');
+    assert.equal((await project()).texts.length, 0);
+    await page.click('#btn-redo');
+    assert.equal((await project()).texts.filter((t) => t.caption).length, 2);
+
+    // Restyle one caption and apply the look to all of them.
+    await page.click('.tl-text.caption >> nth=0');
+    await page.click('.insp button[data-value="box"]');
+    await page.click('#captions-apply-all');
+    proj = await project();
+    assert.ok(proj.texts.every((t) => t.style === 'box'));
+    await page.evaluate(() => window.clipcraft.player.seek(2.5));
+    await page.waitForTimeout(800);
+    await shot('11-captions-added');
+
+    // A rejected key is explained, and nothing changes.
+    reply = 'unauthorized';
+    await page.keyboard.press('Escape');
+    await page.click('#btn-captions');
+    await page.click('#captions-go');
+    await page.waitForSelector('.modal h2:has-text("לא הצלחנו ליצור כתוביות")');
+    assert.match(await page.textContent('.modal-error'), /מפתח ה-API/);
+    assert.equal((await project()).texts.length, 2);
+    await page.click('.modal button:has-text("סגירה")');
+
+    // Black-and-gold templates: a big-number graphic on top, edited, and red captions on the seam.
+    await page.click('.bin .segmented button[data-value="templates"]');
+    await page.evaluate(() => window.clipcraft.player.seek(2));
+    await page.click('.tpl-card[data-template="gold-number"]');
+    await page.waitForFunction(() => (window.clipcraft.store.project.overlays ?? []).length === 1, null, { timeout: 60000 });
+    let graphic = (await project()).overlays[0];
+    assert.equal(graphic.graphic.type, 'number');
+    assert.equal(graphic.region, 'top');
+    assert.equal(graphic.start, 2);
+    assert.ok(existsSync(graphic.path), 'the graphic video was written');
+    assert.ok(Math.abs(graphic.out - 4) < 0.1, `a graphic lasts 4s: ${graphic.out}`);
+    await page.fill('#graphic-value', '×7');
+    await page.click('#graphic-update');
+    await page.waitForFunction((old) => window.clipcraft.store.project.overlays[0].path !== old, graphic.path, { timeout: 60000 });
+    graphic = (await project()).overlays[0];
+    assert.equal(graphic.graphic.value, '×7');
+    assert.equal(graphic.start, 2, 'updating keeps the timing');
+    await page.click('.tpl-card[data-template="gold-captions"]');
+    proj = await project();
+    assert.ok(proj.texts.every((t) => t.caption && t.color === '#ef4444' && t.y === 0.5), 'captions turned red on the seam');
+    await page.evaluate(() => window.clipcraft.player.seek(3.4));
+    await page.waitForTimeout(1000);
+    await shot('13-gold-template');
+
+    // Export: captions go through the shared text lanes.
+    const output = p('captions.mp4');
+    await app.evaluate(({ dialog }, out) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: out });
+    }, output);
+    await page.click('#btn-export');
+    await page.selectOption('.modal-field:has-text("רזולוציה") select', '720');
+    await page.click('#export-go');
+    await page.waitForSelector('.modal h2:has-text("הייצוא הסתיים")', { timeout: 120000 });
+    if (shots) ff(['-ss', '3.4', '-i', output, '-frames:v', '1', path.join(shots, '12-captions-exported.png')]);
+    // While the graphic is up, the top half is its dark background; the bottom is still the video.
+    const px = (y) => [...execFileSync(ffmpegPath(), ['-v', 'error', '-ss', '4', '-i', output, '-frames:v', '1',
+      '-vf', `crop=2:2:20:${y},format=rgb24`, '-f', 'rawvideo', '-'])].slice(0, 3);
+    assert.ok(px(150).every((c) => c < 50), `graphic background on top: ${px(150)}`);
+    assert.ok(Math.max(...px(1100)) > 100, `video at the bottom: ${px(1100)}`);
+    assert.deepEqual(errors, []);
+  } finally {
+    await forgetCaptionsKey(app);
+    await app.evaluate(({ app: a }) => a.exit(0)).catch(() => {});
+    server.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+async function forgetCaptionsKey(app) {
+  const page = await app.firstWindow().catch(() => null);
+  await page?.evaluate(() => window.api.forgetCaptionsKey()).catch(() => {});
+}

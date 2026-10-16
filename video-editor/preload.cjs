@@ -17,6 +17,17 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on('export:progress', listener);
     return () => ipcRenderer.removeListener('export:progress', listener);
   },
+  encodeGraphic: (args) => ipcRenderer.invoke('graphics:encode', args),
+  captionsKeyStatus: () => ipcRenderer.invoke('captions:keyStatus'),
+  setCaptionsKey: (args) => ipcRenderer.invoke('captions:setKey', args),
+  forgetCaptionsKey: () => ipcRenderer.invoke('captions:forgetKey'),
+  runCaptions: (args) => ipcRenderer.invoke('captions:run', args),
+  cancelCaptions: () => ipcRenderer.invoke('captions:cancel'),
+  onCaptionsProgress: (cb) => {
+    const listener = (_e, p) => cb(p);
+    ipcRenderer.on('captions:progress', listener);
+    return () => ipcRenderer.removeListener('captions:progress', listener);
+  },
   onMenuCommand: (cb) => {
     const listener = (_e, name) => cb(name);
     ipcRenderer.on('menu:command', listener);

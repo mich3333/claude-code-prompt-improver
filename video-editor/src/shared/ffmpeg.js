@@ -52,6 +52,37 @@ const hexColor = (c) => `0x${String(c || '#000000').replace('#', '').slice(0, 6)
  *                 rendered by the editor, one per text item.
  * @returns { inputs, filter, outputArgs, duration }
  */
+// Greedy packing of non-overlapping texts into lanes (sorted by start).
+export function textLanes(texts, total = Infinity) {
+  const lanes = [];
+  for (const t of [...texts].sort((a, b) => a.start - b.start)) {
+    const item = { ...t, end: Math.min(t.end, total) };
+    const lane = lanes.find((l) => l.at(-1).end <= item.start + 1e-6);
+    if (lane) lane.push(item);
+    else lanes.push([item]);
+  }
+  return lanes;
+}
+
+const joinPath = (dir, name) => `${dir.replace(/[\\/]+$/, '')}/${name}`;
+const quoteConcat = (p) => `'${String(p).replace(/\\/g, '/').replace(/'/g, "'\\''")}'`;
+
+// ffconcat list: transparent gaps between texts, each text for its duration.
+export function laneList(lane, blankPath, fps = 30) {
+  const lines = ['ffconcat version 1.0'];
+  const entry = (file, d) => lines.push(`file ${quoteConcat(file)}`, `duration ${num(d)}`);
+  let cursor = 0;
+  for (const t of lane) {
+    if (t.start > cursor + 1e-4) entry(blankPath, t.start - cursor);
+    entry(t.path, t.end - Math.max(cursor, t.start));
+    cursor = Math.max(cursor, t.end);
+  }
+  entry(blankPath, 1 / fps);
+  // The concat demuxer ignores the last entry's duration unless the file is listed again.
+  lines.push(`file ${quoteConcat(blankPath)}`);
+  return `${lines.join('\n')}\n`;
+}
+
 export function buildExport(project, opts) {
   const { width: W, height: H, fps = 30, crf = 20, preset = 'veryfast' } = opts;
   const clips = project.clips;
@@ -185,8 +216,22 @@ export function buildExport(project, opts) {
   });
 
   // Text overlays: pre-rendered transparent frames, shown between start/end.
-  (opts.textInputs ?? []).forEach((text, j) => {
-    if (!(text.end > text.start) || text.start >= total) return;
+  // Still texts (no fade or rise, e.g. captions) are packed into "lanes" of
+  // non-overlapping texts, each played as one concat input; animated texts
+  // get an input each.
+  const files = [];
+  const visible = (opts.textInputs ?? []).filter((t) => t.end > t.start && t.start < total);
+  const still = opts.blankPath ? visible.filter((t) => !(t.fade > 0) && !t.rise) : [];
+  textLanes(still, total).forEach((lane, k) => {
+    const listPath = joinPath(opts.workDir ?? '.', `text_lane_${k}.ffconcat`);
+    files.push({ path: listPath, content: laneList(lane, opts.blankPath, fps) });
+    const idx = nextInput++;
+    inputs.push('-f', 'concat', '-safe', '0', '-i', listPath);
+    chains.push(`[${idx}:v]fps=${fps},format=rgba[tl${k}]`);
+    chains.push(`[${v}][tl${k}]overlay=x=0:y=0:eof_action=pass[ovl${k}]`);
+    v = `ovl${k}`;
+  });
+  visible.filter((t) => !still.includes(t)).forEach((text, j) => {
     const end = Math.min(text.end, total);
     const idx = nextInput++;
     inputs.push('-loop', '1', '-framerate', String(fps), '-t', num(end + 0.1), '-i', text.path);
@@ -250,5 +295,5 @@ export function buildExport(project, opts) {
     '-t', num(total),
   ];
 
-  return { inputs, filter: chains.join(';\n'), outputArgs, duration: total };
+  return { inputs, filter: chains.join(';\n'), outputArgs, duration: total, files };
 }

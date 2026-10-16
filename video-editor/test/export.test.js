@@ -215,3 +215,52 @@ test('exports a split screen: feathered overlay on top, main video below', { tim
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('exports many still captions through shared lanes, switching on time', { timeout: 120000 }, async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'clipcraft-test-'));
+  try {
+    const p = (n) => path.join(dir, n);
+    ff(['-f', 'lavfi', '-i', 'color=c=blue:s=360x640:r=30:d=4', '-f', 'lavfi', '-i', 'sine=f=300:d=4',
+      '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', p('main.mp4')]);
+    const { width, height } = frameSize('9:16', 360);
+    const caption = (color) => {
+      const file = p(`cap-${color}.png`);
+      // A solid bar on a transparent frame (drawbox would leave the alpha at 0).
+      ff(['-f', 'lavfi', '-i', `color=c=${color}:s=${width}x100,format=rgba,pad=${width}:${height}:0:400:color=black@0.0`,
+        '-frames:v', '1', file]);
+      return execFileSync('cat', [file]);
+    };
+    const red = caption('red');
+    const yellow = caption('yellow');
+    const project = createProject();
+    project.aspect = '9:16';
+    project.clips = [createClip(await probe(p('main.mp4')))];
+    // Back-to-back captions (one lane) plus an overlapping one (a second lane).
+    const texts = [
+      { png: red, start: 0.5, end: 1.5, fade: 0, rise: false },
+      { png: yellow, start: 1.5, end: 2.5, fade: 0, rise: false },
+      { png: red, start: 3, end: 3.6, fade: 0, rise: false },
+      { png: yellow, start: 3.2, end: 3.4, fade: 0, rise: false },
+    ];
+    const output = p('captions.mp4');
+    await exportProject(project, { output, width, height, fps: 30, crf: 20, preset: 'ultrafast' }, { tmpDir: dir, texts });
+
+    const pixel = (t) => {
+      const raw = execFileSync(ffmpegPath(), ['-v', 'error', '-ss', String(t), '-i', output, '-frames:v', '1',
+        '-vf', 'crop=2:2:180:450', '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1']);
+      return [...raw.subarray(0, 3)];
+    };
+    const isRed = ([r, g, b]) => r > 200 && g < 60 && b < 60;
+    const isYellow = ([r, g, b]) => r > 200 && g > 200 && b < 60;
+    const isBlue = ([r, g, b]) => b > 200 && r < 60 && g < 60;
+    assert.ok(isBlue(pixel(0.2)), `no caption before the first: ${pixel(0.2)}`);
+    assert.ok(isRed(pixel(1)), `first caption: ${pixel(1)}`);
+    assert.ok(isYellow(pixel(2)), `second caption replaces the first: ${pixel(2)}`);
+    assert.ok(isBlue(pixel(2.75)), `gap between captions: ${pixel(2.75)}`);
+    assert.ok(isYellow(pixel(3.3)), `overlapping caption drawn on top: ${pixel(3.3)}`);
+    assert.ok(isRed(pixel(3.5)), `back to the lower lane: ${pixel(3.5)}`);
+    assert.ok(isBlue(pixel(3.8)), `after the last caption: ${pixel(3.8)}`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
