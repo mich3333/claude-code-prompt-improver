@@ -27,6 +27,6 @@ export const RemotionRoot: React.FC = () => (
       height={H}
       defaultProps={defaults}
     />
-    <Composition id="AI2026" component={Year2026} durationInFrames={YEAR_DURATION} fps={FPS} width={W} height={H} />
+    <Composition id="AI2026" component={Year2026} durationInFrames={YEAR_DURATION} fps={FPS} width={W} height={H} defaultProps={{ voice: null }} />
   </>
 );

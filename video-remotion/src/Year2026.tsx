@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, Easing, interpolate, random, spring, useCurrentFrame, useVideoConfig } from 'remotion';
+import { AbsoluteFill, Audio, Easing, interpolate, random, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { Logo } from './brands';
 import { COLORS, H, W, Waves } from './ui';
 import { HEADLINES, MONTHS, type Headline } from './year2026';
@@ -205,7 +205,12 @@ const Title: React.FC = () => {
   );
 };
 
-export const Year2026: React.FC = () => {
+export type YearProps = {
+  /** Voice-over in public/, e.g. "voice-2026.mp3". */
+  voice: string | null;
+};
+
+export const Year2026: React.FC<YearProps> = ({ voice }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const cam = camY(frame);
@@ -231,6 +236,7 @@ export const Year2026: React.FC = () => {
         </div>
       </AbsoluteFill>
       <Title />
+      {voice && <Audio src={staticFile(voice)} />}
     </AbsoluteFill>
   );
 };

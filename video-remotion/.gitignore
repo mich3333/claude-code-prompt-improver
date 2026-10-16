@@ -3,4 +3,4 @@ out/
 # Personal media stays out of git: the presenter photo/video, poses, voice-over.
 public/avatar.*
 public/poses/
-public/voice.*
+public/voice*
