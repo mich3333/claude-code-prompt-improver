@@ -6,3 +6,5 @@ public/poses/
 public/voice*
 # Article screenshots are third-party pages: captured locally, not committed.
 public/articles/
+public/demos/
+public/face*

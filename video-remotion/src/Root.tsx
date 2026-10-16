@@ -12,6 +12,7 @@ import { YEAR_DURATION, Year2026, type YearProps } from './Year2026';
 import { NEWS_SCRIPT, NewsCast, type NewsProps } from './NewsCast';
 import { Versus, versusDuration, type VersusProps } from './Versus';
 import { MATCHES } from './versus';
+import { SKILL_SCRIPT, SkillExplainer, type SkillProps } from './SkillExplainer';
 
 const defaults: WeeklyProps = {
   avatar: null,
@@ -95,6 +96,20 @@ export const RemotionRoot: React.FC = () => (
       height={H}
       defaultProps={{ match: 'openai-anthropic', voice: null } as VersusProps}
       calculateMetadata={({ props }: { props: VersusProps }) => ({ durationInFrames: versusDuration(MATCHES[props.match]) })}
+    />
+    {/* Split-layout explainer about the Remotion skill; with a filmed face, pass "face" and the transcript "words". */}
+    <Composition
+      id="SkillExplainer"
+      component={SkillExplainer}
+      durationInFrames={300}
+      fps={FPS}
+      width={W}
+      height={H}
+      defaultProps={{ voice: null, words: estimateWords(SKILL_SCRIPT.map((l) => l.text), { start: 0.5, pause: 0.5 }), face: null } as SkillProps}
+      calculateMetadata={({ props }: { props: SkillProps }) => {
+        const end = props.words?.length ? props.words[props.words.length - 1].end : 10;
+        return { durationInFrames: Math.ceil((end + 1.5) * FPS) };
+      }}
     />
   </>
 );
