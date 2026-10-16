@@ -69,3 +69,16 @@ test('inserting a card moves later overlays with their clips', () => {
   const res = insertClip(p, 0, createCard('#000000', 3));
   assert.equal(res.overlays[0].start, 5);
 });
+
+test('transparent WebM layers are decoded with libvpx and keep their own alpha', () => {
+  const plain = buildExport(projectWithOverlay(), opts);
+  assert.ok(!plain.inputs.includes('libvpx-vp9'));
+  const p = createProject();
+  p.aspect = '9:16';
+  p.clips = [createClip(media())];
+  p.overlays = [{ ...createOverlay(media({ path: '/in/captions.webm', hasAudio: false, alphaDecoder: 'libvpx-vp9' }), 0), out: 4 }];
+  const { inputs, filter } = buildExport(p, opts);
+  const i = inputs.indexOf('/in/captions.webm');
+  assert.deepEqual(inputs.slice(i - 7, i - 5), ['-c:v', 'libvpx-vp9'], 'the decoder is chosen before the input');
+  assert.doesNotMatch(filter, /alphamerge/, 'no soft-edge mask over the layer\'s own alpha');
+});

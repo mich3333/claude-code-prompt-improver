@@ -158,6 +158,7 @@ export function createOverlay(media, start = 0) {
     width: media.width ?? null,
     height: media.height ?? null,
     hasAudio: !isImage && Boolean(media.hasAudio),
+    alphaDecoder: isImage ? null : media.alphaDecoder ?? null, // transparent WebM: decode with libvpx
     start,
     in: 0,
     out: isImage ? DEFAULT_IMAGE_DURATION : media.duration,

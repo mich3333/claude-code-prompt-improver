@@ -1,0 +1,16 @@
+{
+  "name": "reel-motion",
+  "private": true,
+  "type": "module",
+  "description": "Remotion compositions for Hebrew reels (kinetic titles, lists, quotes, word-highlight captions, covers). Rendered by ../scripts/render_motion.mjs.",
+  "dependencies": {
+    "@fontsource/heebo": "5.3.0",
+    "@fontsource/rubik": "5.3.0",
+    "@remotion/bundler": "4.0.535",
+    "@remotion/cli": "4.0.535",
+    "@remotion/renderer": "4.0.535",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.535"
+  }
+}

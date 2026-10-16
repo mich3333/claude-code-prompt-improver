@@ -264,3 +264,33 @@ test('exports many still captions through shared lanes, switching on time', { ti
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('exports a transparent VP9 WebM layer with its alpha (e.g. Remotion captions)', { timeout: 120000 }, async () => {
+  const { createOverlay } = await import('../src/shared/timeline.js');
+  const dir = mkdtempSync(path.join(tmpdir(), 'clipcraft-test-'));
+  try {
+    const p = (n) => path.join(dir, n);
+    ff(['-f', 'lavfi', '-i', 'color=c=blue:s=360x640:r=30:d=3', '-f', 'lavfi', '-i', 'sine=f=300:d=3',
+      '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', p('main.mp4')]);
+    // Transparent frame with an opaque red box in the middle.
+    ff(['-f', 'lavfi', '-i', "color=c=red:s=360x640:r=30:d=3,format=rgba,geq=r=255:g=0:b=0:a='255*between(X,120,240)*between(Y,280,360)'",
+      '-c:v', 'libvpx-vp9', '-pix_fmt', 'yuva420p', '-auto-alt-ref', '0', p('captions.webm')]);
+    const layer = await probe(p('captions.webm'));
+    assert.equal(layer.alphaDecoder, 'libvpx-vp9', 'the probe notices the alpha channel');
+    const project = createProject();
+    project.aspect = '9:16';
+    project.clips = [createClip(await probe(p('main.mp4')))];
+    project.overlays = [{ ...createOverlay(layer, 0), region: 'full', out: 3, fade: false }];
+
+    const output = p('alpha.mp4');
+    await exportProject(project, { output, width: 360, height: 640, fps: 30, crf: 20, preset: 'ultrafast' }, { tmpDir: dir });
+    const pixel = (x, y) => [...execFileSync(ffmpegPath(), ['-v', 'error', '-ss', '1.5', '-i', output, '-frames:v', '1',
+      '-vf', `crop=2:2:${x}:${y}`, '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1']).subarray(0, 3)];
+    const [r1, , b1] = pixel(180, 320);
+    assert.ok(r1 > 200 && b1 < 60, `the opaque part shows: ${pixel(180, 320)}`);
+    const [r2, , b2] = pixel(40, 100);
+    assert.ok(b2 > 200 && r2 < 60, `the transparent part shows the video under it: ${pixel(40, 100)}`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
