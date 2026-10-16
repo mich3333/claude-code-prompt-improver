@@ -1,6 +1,6 @@
 import '@fontsource/playfair-display/700-italic.css';
 import React from 'react';
-import { AbsoluteFill, Audio, Easing, Img, OffthreadVideo, interpolate, random, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
+import { AbsoluteFill, Audio, Easing, Img, OffthreadVideo, Sequence, interpolate, random, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { Anchor, ANCHOR_BOX } from './anchor';
 import type { Word } from './captions';
 import { COLORS, W } from './ui';
@@ -16,7 +16,7 @@ type Shot =
   | { kind: 'repo' }
   | { kind: 'install' }
   | { kind: 'skills' }
-  | { kind: 'example'; prompt: string; clip: string; from: number }
+  | { kind: 'example'; prompt: string; reply: string; clip: string; from: number }
   | { kind: 'outro' };
 
 export const SKILL_SCRIPT: { text: string; shot: Shot }[] = [
@@ -26,15 +26,15 @@ export const SKILL_SCRIPT: { text: string; shot: Shot }[] = [
   { text: 'ויש בו סקילים לכל דבר: ליצור סרטון, להנפיש טקסט, כתוביות, מפות ורינדור.', shot: { kind: 'skills' } },
   {
     text: 'ואז פשוט כותבים לו, כמו שכותבים לחבר: תעשה לי מהדורת חדשות עם מגיש מונפש.',
-    shot: { kind: 'example', prompt: 'תעשה לי מהדורת חדשות עם מגיש מונפש', clip: 'demos/ai-news.mp4', from: 6 },
+    shot: { kind: 'example', prompt: 'תעשה לי מהדורת חדשות עם מגיש מונפש', reply: 'בניתי מהדורה: מגיש באולפן, מסך עם הכתבות ופס מבזקים.', clip: 'demos/ai-news.mp4', from: 6 },
   },
   {
     text: 'או: תשווה בין OpenAI ל-Anthropic.',
-    shot: { kind: 'example', prompt: 'תשווה בין OpenAI ל-Anthropic', clip: 'demos/openai-vs-anthropic.mp4', from: 3 },
+    shot: { kind: 'example', prompt: 'תשווה בין OpenAI ל-Anthropic', reply: 'ארבעה סיבובים, ולכל מספר יש מקור.', clip: 'demos/openai-vs-anthropic.mp4', from: 3 },
   },
   {
     text: 'או: קח כתבות אמיתיות ותשייך אחת לכל אירוע.',
-    shot: { kind: 'example', prompt: 'קח כתבות אמיתיות ותשייך אחת לכל אירוע', clip: 'demos/ai-2026-articles.mp4', from: 8 },
+    shot: { kind: 'example', prompt: 'קח כתבות אמיתיות ותשייך אחת לכל אירוע', reply: 'צילמתי 17 כתבות וחיברתי כל אחת לכרטיס שלה.', clip: 'demos/ai-2026-articles.mp4', from: 8 },
   },
   { text: 'כל הסרטונים האלה נבנו ככה. שמרו את הסרטון, ובפעם הבאה אני מראה את כל התהליך.', shot: { kind: 'outro' } },
 ];
@@ -159,22 +159,6 @@ const PromptBox: React.FC<{ text: string; f: number; size?: number }> = ({ text,
   );
 };
 
-const HookShot: React.FC<{ f: number }> = ({ f }) => {
-  const { fps } = useVideoConfig();
-  const sent = 4 + 'תעשה לי סרטון'.length / 1.2 + 6;
-  const play = spring({ frame: f - sent, fps, config: { damping: 10, stiffness: 180, mass: 0.6 } });
-  return (
-    <Screen f={f}>
-      <div style={{ position: 'absolute', inset: 40, display: 'flex', flexDirection: 'column', gap: 40, justifyContent: 'center' }}>
-        <PromptBox text="תעשה לי סרטון" f={f} size={54} />
-        <div style={{ alignSelf: 'center', width: 230, height: 230, borderRadius: 60, background: COLORS.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', transform: `scale(${play}) rotate(${(1 - play) * -20}deg)`, boxShadow: `0 0 ${play * 80}px rgba(226,181,76,0.6)` }}>
-          <div style={{ width: 0, height: 0, borderTop: '56px solid transparent', borderBottom: '56px solid transparent', borderLeft: `92px solid ${COLORS.onGold}`, marginLeft: 22 }} />
-        </div>
-      </div>
-    </Screen>
-  );
-};
-
 const RepoShot: React.FC<{ f: number }> = ({ f }) => {
   const stars = interpolate(f, [10, 40], [0, 5.2], { ...clamp, easing: Easing.out(Easing.cubic) });
   const tag = (t: string, k: number) => (
@@ -268,41 +252,91 @@ const SkillsShot: React.FC<{ f: number }> = ({ f }) => {
   );
 };
 
-const ExampleShot: React.FC<{ f: number; prompt: string; clip: string; from: number }> = ({ f, prompt, clip, from }) => {
+// A laptop with a chat on its screen: the request is typed and sent, the
+// assistant "types", answers in a line, and the finished video appears in the
+// chat and plays. The chat is our own neutral design, not any product's UI.
+const LaptopChat: React.FC<{ f: number; prompt: string; reply: string; clip: string; from: number }> = ({ f, prompt, reply, clip, from }) => {
   const { fps } = useVideoConfig();
-  const sentAt = 4 + prompt.length / 1.2 + 4;
-  const reveal = spring({ frame: f - sentAt, fps, config: { damping: 14, stiffness: 150, mass: 0.7 } });
-  const phoneH = 530;
-  const phoneW = Math.round((phoneH * 9) / 16);
+  const segStart = useCurrentFrame() - f;
+  const enter = spring({ frame: f, fps, config: { damping: 16, stiffness: 150, mass: 0.8 } });
+  const cpsIn = 1.3;
+  const sendAt = 4 + Math.ceil(prompt.length / cpsIn) + 3;
+  const dotsAt = sendAt + 5;
+  const replyAt = dotsAt + 14;
+  const replyShown = typed(reply, f, replyAt, 3);
+  const videoAt = replyAt + Math.ceil(reply.length / 3) + 2;
+  const bubble = spring({ frame: f - sendAt, fps, config: { damping: 13, stiffness: 220, mass: 0.5 } });
+  const vid = spring({ frame: f - videoAt, fps, config: { damping: 14, stiffness: 170, mass: 0.6 } });
+  const inputText = f < sendAt ? typed(prompt, f, 4, cpsIn) : '';
+  const SCREEN = { w: 900, h: 600 };
+  const vidH = 230;
   return (
-    <Screen f={f}>
-      <div style={{ position: 'absolute', top: 30, left: 30, right: 30 }}>
-        <PromptBox text={prompt} f={f} size={40} />
+    <div style={{ position: 'absolute', left: PANEL.x, top: PANEL.y + 10, width: PANEL.w, height: PANEL.h, transform: `translateY(${(1 - enter) * 60}px) scale(${0.92 + enter * 0.08})`, opacity: Math.min(1, enter * 1.4) }}>
+      {/* Lid */}
+      <div style={{ position: 'absolute', left: (PANEL.w - SCREEN.w - 36) / 2, top: 0, width: SCREEN.w + 36, height: SCREEN.h + 36, borderRadius: 30, background: '#2a2620', border: '2px solid #4a4336', boxShadow: '0 0 60px rgba(255,255,255,0.12), 0 0 90px rgba(226,181,76,0.15)' }}>
+        <div style={{ position: 'absolute', top: 7, left: '50%', marginLeft: -5, width: 10, height: 10, borderRadius: 5, background: '#111' }} />
+        <div style={{ position: 'absolute', left: 18, top: 18, width: SCREEN.w, height: SCREEN.h, borderRadius: 12, overflow: 'hidden', background: '#f6f3ec', direction: 'rtl' }}>
+          {/* App bar */}
+          <div style={{ height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 22px', background: '#ece7dc', borderBottom: '1px solid #dcd5c6' }}>
+            <div style={{ fontSize: 26, fontWeight: 700, color: '#2a2620' }}>שיחה חדשה</div>
+            <div style={{ display: 'flex', gap: 10, direction: 'ltr' }}>
+              {['#e0605e', '#e2b54c', '#6abf69'].map((c) => (
+                <div key={c} style={{ width: 16, height: 16, borderRadius: 8, background: c }} />
+              ))}
+            </div>
+          </div>
+          {/* Messages */}
+          <div style={{ position: 'absolute', top: 76, left: 24, right: 24, bottom: 100, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {f >= sendAt && (
+              <div style={{ alignSelf: 'flex-start', maxWidth: '78%', padding: '14px 22px', borderRadius: '24px 24px 6px 24px', background: '#2a2620', color: '#f6f3ec', fontSize: 34, fontWeight: 600, transform: `scale(${bubble})`, transformOrigin: '100% 100%' }}>
+                {prompt}
+              </div>
+            )}
+            {f >= dotsAt && (
+              <div style={{ alignSelf: 'flex-end', display: 'flex', gap: 14, alignItems: 'flex-start', direction: 'rtl', flexDirection: 'row-reverse', maxWidth: '86%' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-end' }}>
+                  {f < replyAt ? (
+                    <div style={{ display: 'flex', gap: 8, padding: '18px 22px', borderRadius: 22, background: '#ffffff', border: '1px solid #e2dccf' }}>
+                      {[0, 1, 2].map((k) => (
+                        <div key={k} style={{ width: 12, height: 12, borderRadius: 6, background: COLORS.goldDark, opacity: 0.35 + 0.65 * Math.abs(Math.sin((f - dotsAt) / 4 - k * 0.8)) }} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ padding: '14px 22px', borderRadius: 22, background: '#ffffff', border: '1px solid #e2dccf', color: '#2a2620', fontSize: 31, fontWeight: 500, lineHeight: 1.35 }}>{replyShown}</div>
+                  )}
+                  {f >= videoAt - 1 && (
+                    <div style={{ width: Math.round((vidH * 9) / 16), height: vidH, borderRadius: 16, overflow: 'hidden', border: `3px solid ${COLORS.gold}`, background: '#000', transform: `scale(${vid})`, transformOrigin: '0% 0%', boxShadow: '0 10px 30px rgba(0,0,0,0.25)' }}>
+                      {/* Media time runs from when the clip appears, not from the start of the reel. */}
+                      <Sequence from={segStart + videoAt - 1} layout="none">
+                        <OffthreadVideo src={staticFile(clip)} startFrom={Math.round(from * fps)} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </Sequence>
+                    </div>
+                  )}
+                </div>
+                <div style={{ width: 46, height: 46, borderRadius: 23, background: COLORS.gold, color: COLORS.onGold, fontSize: 20, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, direction: 'ltr' }}>AI</div>
+              </div>
+            )}
+          </div>
+          {/* Input */}
+          <div style={{ position: 'absolute', left: 22, right: 22, bottom: 20, height: 66, borderRadius: 33, background: '#ffffff', border: '2px solid #dcd5c6', display: 'flex', alignItems: 'center', padding: '0 12px 0 24px', gap: 12 }}>
+            <div style={{ flex: 1, fontSize: 32, color: inputText ? '#2a2620' : '#a39b8b', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden' }}>
+              {inputText || 'כתבו הודעה…'}
+              {f < sendAt && inputText && <Cursor f={f} color="#2a2620" />}
+            </div>
+            <div style={{ width: 48, height: 48, borderRadius: 24, background: inputText ? COLORS.gold : '#d8d1c2', color: COLORS.onGold, fontSize: 28, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>↑</div>
+          </div>
+        </div>
       </div>
-      <div
-        style={{
-          position: 'absolute',
-          top: 200,
-          left: (PANEL.w - 28 - phoneW) / 2,
-          width: phoneW,
-          height: phoneH,
-          borderRadius: 30,
-          overflow: 'hidden',
-          border: `4px solid ${COLORS.gold}`,
-          boxShadow: `0 0 ${reveal * 60}px rgba(226,181,76,0.4)`,
-          transform: `translateY(${(1 - reveal) * 120}px) scale(${0.85 + reveal * 0.15})`,
-          opacity: Math.min(1, reveal * 1.5),
-          background: '#000',
-        }}
-      >
-        {f >= sentAt - 2 && <OffthreadVideo src={staticFile(clip)} startFrom={Math.round(from * fps)} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-      </div>
-    </Screen>
+      {/* Base */}
+      <div style={{ position: 'absolute', left: 10, right: 10, top: SCREEN.h + 36, height: 34, background: 'linear-gradient(180deg, #3a342a, #1d1a14)', clipPath: 'polygon(4% 0, 96% 0, 100% 100%, 0 100%)', borderRadius: '0 0 18px 18px' }} />
+      <div style={{ position: 'absolute', left: '50%', marginLeft: -90, top: SCREEN.h + 36, width: 180, height: 10, borderRadius: '0 0 10px 10px', background: '#14120e' }} />
+    </div>
   );
 };
 
 const OutroShot: React.FC<{ f: number }> = ({ f }) => {
   const { fps } = useVideoConfig();
+  const segStart = useCurrentFrame() - f;
   const clips = SKILL_SCRIPT.flatMap((l) => (l.shot.kind === 'example' ? [l.shot] : []));
   const save = spring({ frame: f - 30, fps, config: { damping: 10, stiffness: 170, mass: 0.6 } });
   return (
@@ -312,7 +346,9 @@ const OutroShot: React.FC<{ f: number }> = ({ f }) => {
           const s = spring({ frame: f - k * 6, fps, config: { damping: 14, stiffness: 160, mass: 0.7 } });
           return (
             <div key={c.clip} style={{ width: 270, height: 480, borderRadius: 22, overflow: 'hidden', border: `3px solid ${COLORS.gold}`, transform: `scale(${s}) rotate(${(k - 1) * 3}deg)` }}>
-              <OffthreadVideo src={staticFile(c.clip)} startFrom={Math.round((c.from + 4) * fps)} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <Sequence from={segStart} layout="none">
+                <OffthreadVideo src={staticFile(c.clip)} startFrom={Math.round((c.from + 4) * fps)} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </Sequence>
             </div>
           );
         })}
@@ -395,11 +431,11 @@ export const SkillExplainer: React.FC<SkillProps> = ({ voice, words, face }) => 
     <AbsoluteFill style={{ fontFamily: 'Rubik, sans-serif', background: COLORS.bgBottom, width: W }}>
       <Backdrop />
       <Title />
-      {shot.kind === 'hook' && <HookShot key={seg?.i} f={f} />}
+      {shot.kind === 'hook' && <LaptopChat key={seg?.i} f={f} prompt="תעשה לי סרטון על חדשות ה-AI" reply="מתחיל לבנות. הנה הסרטון:" clip="demos/ai-2026-articles.mp4" from={2} />}
       {shot.kind === 'repo' && <RepoShot key={seg?.i} f={f} />}
       {shot.kind === 'install' && <InstallShot key={seg?.i} f={f} />}
       {shot.kind === 'skills' && <SkillsShot key={seg?.i} f={f} />}
-      {shot.kind === 'example' && <ExampleShot key={seg?.i} f={f} prompt={shot.prompt} clip={shot.clip} from={shot.from} />}
+      {shot.kind === 'example' && <LaptopChat key={seg?.i} f={f} prompt={shot.prompt} reply={shot.reply} clip={shot.clip} from={shot.from} />}
       {shot.kind === 'outro' && <OutroShot key={seg?.i} f={f} />}
       <BigWord words={ws} />
       <Presenter face={face} words={ws} voice={voice} />
