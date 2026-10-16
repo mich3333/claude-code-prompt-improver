@@ -1,0 +1,81 @@
+# Builds the ClipCraft video editor installers on real macOS, Windows and
+# Linux machines, and publishes them as the "clipcraft-latest" pre-release.
+
+name: ClipCraft build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, 'feature/**']
+    paths:
+      - 'video-editor/**'
+      - '.github/workflows/clipcraft-build.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: clipcraft-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: mac-apple-silicon
+            os: macos-14
+            target: --mac --arm64
+          - name: windows
+            os: windows-latest
+            target: --win --x64
+          - name: linux
+            os: ubuntu-latest
+            target: --linux --x64
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: video-editor
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: video-editor/package-lock.json
+      - run: npm ci
+      - name: Unit tests
+        run: npm test
+      - name: Export tests (real FFmpeg)
+        if: runner.os == 'Linux'
+        run: npm run test:export
+      - name: Build installer
+        run: npx vite build && npx electron-builder ${{ matrix.target }} --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clipcraft-${{ matrix.name }}
+          path: |
+            video-editor/dist/*.dmg
+            video-editor/dist/*.exe
+            video-editor/dist/*.AppImage
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Publish the clipcraft-latest pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release delete clipcraft-latest --yes --cleanup-tag || true
+          gh release create clipcraft-latest out/* --prerelease --target "${GITHUB_SHA}" \
+            --title "ClipCraft (latest build)" \
+            --notes "Built from ${GITHUB_REF_NAME} at ${GITHUB_SHA}. Mac (Apple Silicon): ClipCraft-*-mac-arm64.dmg. Windows: ClipCraft-*-win-x64.exe. Linux: ClipCraft-*-linux-x86_64.AppImage."
