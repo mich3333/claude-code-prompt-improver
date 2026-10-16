@@ -190,7 +190,7 @@ test('exports a split screen: feathered overlay on top, main video below', { tim
     const project = createProject();
     project.aspect = '9:16';
     project.clips = [createClip(await probe(p('main.mp4')))];
-    project.overlays = [{ ...createOverlay(await probe(p('graphic.mp4')), 1), out: 2, fade: false, muted: false, volume: 0.5 }];
+    project.overlays = [{ ...createOverlay(await probe(p('graphic.mp4')), 1), out: 2, animation: 'none', muted: false, volume: 0.5 }];
 
     const { width, height } = frameSize('9:16', 360);
     const output = p('split.mp4');
@@ -211,6 +211,54 @@ test('exports a split screen: feathered overlay on top, main video below', { tim
     const edge = pixel(2, 300); // inside the feathered band
     assert.ok(edge[0] > 60 && edge[2] > 60, `the edge blends both: ${edge}`);
     assert.ok(isBlue(pixel(3.5, 100)), 'after it ends, the main video is back');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('exports a full-frame layer that slides in from the right and out again', { timeout: 120000 }, async () => {
+  const { createOverlay } = await import('../src/shared/timeline.js');
+  const { overlayOffset } = await import('../src/shared/overlay-motion.js');
+  const dir = mkdtempSync(path.join(tmpdir(), 'clipcraft-test-'));
+  try {
+    const p = (n) => path.join(dir, n);
+    // Main video: solid blue; layer: a solid red "screenshot".
+    ff(['-f', 'lavfi', '-i', 'color=c=blue:s=360x640:r=30:d=4', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', p('main.mp4')]);
+    ff(['-f', 'lavfi', '-i', 'color=c=red:s=400x300', '-frames:v', '1', p('news.png')]);
+    const project = createProject();
+    project.aspect = '9:16';
+    project.clips = [createClip(await probe(p('main.mp4')))];
+    const layer = { ...createOverlay(await probe(p('news.png')), 1), out: 2, region: 'full', animation: 'slideright' };
+    project.overlays = [layer];
+
+    const { width, height } = frameSize('9:16', 360);
+    const output = p('slide.mp4');
+    await exportProject(project, { output, width, height, fps: 30, crf: 20, preset: 'ultrafast' }, { tmpDir: dir });
+
+    // Every frame from 1.0s to 1.1s: the layer's left edge sits where the preview draws it.
+    const frames = 4;
+    const raw = execFileSync(ffmpegPath(), ['-v', 'error', '-ss', '1', '-i', output, '-frames:v', String(frames),
+      '-vf', `crop=${width}:2:0:320`, '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1']);
+    const isRed = ([r, g, b]) => r > 180 && g < 80 && b < 80;
+    const isBlue = ([r, g, b]) => b > 180 && r < 80 && g < 80;
+    const at = (f, x) => [...raw.subarray((f * 2 * width + x) * 3, (f * 2 * width + x) * 3 + 3)];
+    for (let f = 1; f < frames; f++) {
+      const t = 1 + f / 30;
+      const { dx } = overlayOffset(layer, t, width, height, 2);
+      assert.ok(dx > 20 && dx < width - 20, `mid-slide at ${t.toFixed(3)}s (dx=${dx.toFixed(1)})`);
+      assert.ok(isBlue(at(f, Math.floor(dx) - 12)), `left of the layer is the main video at ${t.toFixed(3)}s: ${at(f, Math.floor(dx) - 12)}`);
+      assert.ok(isRed(at(f, Math.ceil(dx) + 12)), `the layer at ${t.toFixed(3)}s: ${at(f, Math.ceil(dx) + 12)}`);
+    }
+
+    const pixel = (t, x) => {
+      const px = execFileSync(ffmpegPath(), ['-v', 'error', '-ss', String(t), '-i', output, '-frames:v', '1',
+        '-vf', `crop=2:2:${x}:320`, '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1']);
+      return [...px.subarray(0, 3)];
+    };
+    assert.ok(isBlue(pixel(0.5, 20)), 'before the layer, the main video');
+    assert.ok(isRed(pixel(1.5, 20)), `after it lands, the layer covers the frame: ${pixel(1.5, 20)}`);
+    assert.ok(isRed(pixel(2.5, 340)), `still at rest before the exit: ${pixel(2.5, 340)}`);
+    assert.ok(isBlue(pixel(3.5, 20)), 'after it slides out, the main video is back');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

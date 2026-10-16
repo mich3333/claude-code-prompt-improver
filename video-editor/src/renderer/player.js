@@ -7,6 +7,7 @@ import {
 } from '../shared/timeline.js';
 import { drawText, measureText, textAlpha } from './text-render.js';
 import { textRiseOffset } from '../shared/ffmpeg.js';
+import { overlayOffset } from '../shared/overlay-motion.js';
 
 const DRIFT_LIMIT = 0.3; // seconds before a playing video is re-synced
 
@@ -281,7 +282,7 @@ export class Player {
 
   // Split-screen overlay: fill its region (cover/contain), fade the inner edge
   // to transparent with a gradient mask, then composite onto the frame.
-  drawOverlay(o, alpha) {
+  drawOverlay(o, alpha, { dx = 0, dy = 0 } = {}) {
     if (alpha <= 0) return;
     const W = this.canvas.width;
     const H = this.canvas.height;
@@ -327,7 +328,7 @@ export class Player {
     const { ctx } = this;
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.drawImage(off, 0, 0);
+    ctx.drawImage(off, dx, dy);
     ctx.restore();
   }
 
@@ -394,9 +395,15 @@ export class Player {
     }
     const sel = this.store.selection;
     for (const seg of this.overlaySegs(this.time)) {
-      // While paused, the selected layer is shown fully (as at its first frame it is still faded out).
-      const full = !this.playing && sel?.id === seg.clip.id;
-      this.drawOverlay(seg.clip, full ? 1 : overlayAlpha(seg.clip, this.time));
+      const o = seg.clip;
+      // While paused, the selected layer is shown fully and at rest (at its first frame it is still faded out or off-frame).
+      if (!this.playing && sel?.id === o.id) {
+        this.drawOverlay(o, 1);
+        continue;
+      }
+      // Like the export, a layer running past the end of the video ends (and slides out) there.
+      const D = Math.min(seg.end, this.duration) - o.start;
+      this.drawOverlay(o, overlayAlpha(o, this.time, D), overlayOffset(o, this.time, W, H, D));
     }
     for (const text of this.project.texts) {
       let alpha = textAlpha(text, this.time);

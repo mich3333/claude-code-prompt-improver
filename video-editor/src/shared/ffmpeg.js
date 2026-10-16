@@ -3,8 +3,9 @@
 
 import { clipOps, toFfmpegFilters } from './effects.js';
 import {
-  clipDuration, effectiveTransition, layoutClips, OVERLAY_FADE, overlayDuration, overlayRect, totalDuration,
+  clipDuration, effectiveTransition, layoutClips, OVERLAY_FADE, overlayAnimation, overlayDuration, overlayRect, totalDuration,
 } from './timeline.js';
+import { overlayPosition } from './overlay-motion.js';
 
 const AUDIO_FMT = 'aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo';
 const TEXT_FADE = 0.4;
@@ -200,13 +201,14 @@ export function buildExport(project, opts) {
       src = `olf${j}`;
     }
     const post = [];
-    if (o.fade) {
+    if (overlayAnimation(o) === 'fade') {
       const fd = Math.min(OVERLAY_FADE, D / 2);
       post.push(`fade=t=in:st=0:d=${num(fd)}:alpha=1`, `fade=t=out:st=${num(D - fd)}:d=${num(fd)}:alpha=1`);
     }
     post.push(`setpts=PTS+${num(o.start)}/TB`);
     chains.push(`[${src}]${post.join(',')}[olt${j}]`);
-    chains.push(`[${v}][olt${j}]overlay=x=${r.x}:y=${r.y}:enable='between(t,${num(o.start)},${num(o.start + D)})':eof_action=pass[olv${j}]`);
+    // Sliding layers move along the shared curve (see overlay-motion.js).
+    chains.push(`[${v}][olt${j}]overlay=${overlayPosition(o, W, H, D)}:enable='between(t,${num(o.start)},${num(o.start + D)})':eof_action=pass[olv${j}]`);
     v = `olv${j}`;
 
     if (o.kind === 'video' && o.hasAudio && !o.muted && o.volume > 0) {

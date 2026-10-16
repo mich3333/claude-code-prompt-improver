@@ -5,7 +5,7 @@ A desktop video editor (Electron + React + Motion, with FFmpeg for export) with 
 ## Features
 
 - **Cut and join**: import videos and photos, drag to reorder, trim by dragging clip edges (or set start/end at the playhead), and split at the playhead.
-- **Split screen**: put a photo or video on a layer above the main video, in the top or bottom part of the frame or full frame, with a soft blended edge between the halves.
+- **Split screen and layers**: put a photo or video on a layer above the main video, in the top or bottom part of the frame or full frame, with a soft blended edge between the halves. A layer can fade in and out, or slide in from the right, left or bottom (like a news screenshot popping over the talking head in explainer reels) and slide out again.
 - **Automatic captions**: transcribes the speech in your clips with ElevenLabs Scribe and adds short, punchy captions (1–4 words each) timed to the words.
 - **Text and captions**: multi-line titles with full Hebrew/RTL support, 5 fonts, size, color, bold, shadow/outline/box styles, and fade in/out. Drag text directly on the preview to position it.
 - **Music and audio**: a background music track with volume, start point, "skip intro", loop, and fade in/out. Each clip has its own volume and mute.
@@ -54,7 +54,9 @@ For the "graphic on top, talking head below" look common in vertical videos:
 3. In the settings panel, choose **למעלה / למטה / מסך מלא** (top / bottom / full frame), the height of the area (30–70%), and how soft the edge between the halves is.
 4. Drag the layer on the timeline to move it, or drag its edges to trim it. Layers are muted by default, so your voice from the main track carries on; turn on "include sound" if you need the layer's audio.
 
-Layers can overlap: later layers are drawn on top. Each layer fades in and out over a quarter of a second (you can turn this off).
+Layers can overlap: later layers are drawn on top.
+
+Under **כניסה ויציאה** (entrance and exit) choose how a layer appears: **הופעה רכה** (fade in and out over a quarter of a second, the default), **החלקה מימין / משמאל / מלמטה** (slide in from the right, left or bottom), or **ללא** (none). For the classic explainer-reel look, put a screenshot on a full-frame layer and slide it in from the right. A slide is short and decisive: the layer enters from just outside the frame in 0.3s with a strong ease-out (quint, close to the UI's `cubic-bezier(0.23, 1, 0.32, 1)`), stays put, then leaves the way it came in a quicker 0.24s. The curve lives in `src/shared/overlay-motion.js`; the preview offsets the layer with it and the export turns the same formula into an animated `overlay` x/y expression (`eval=frame`), so both move identically. While the video is paused, the selected layer is shown at rest so you can see what you are editing.
 
 The interface is in Hebrew and laid out right to left. The timeline and the playback controls stay left to right, because time runs that way in every video editor. Keyboard shortcuts use physical keys, so they work on a Hebrew keyboard layout too.
 
@@ -149,6 +151,7 @@ vite.config.js          builds the React UI into build/renderer (scripts/dev.mjs
 src/shared/             pure logic shared by UI and export
   templates.js          the Claude-style templates (palette, cards, texts)
   timeline.js           project model, layout, transitions, split
+  overlay-motion.js     layer slide-in/out curve, shared by the preview and the export
   effects.js            color presets → CSS filters (preview) and FFmpeg filters (export)
   ffmpeg.js             builds the FFmpeg filter graph for a project
   captions.js           automatic captions: what to transcribe, word timing, short caption grouping
@@ -179,7 +182,7 @@ test/                   unit, export and UI tests
    בלשונית **תבניות** יש פתיח, ציטוט, כותרת תחתונה, סיום וצבע חם בסגנון Claude. לחיצה אחת מוסיפה אותם.
    **שחור וזהב**: בלשונית **תבניות** יש מספר גדול, גרף עמודות, ציר שנים וכתוביות אדומות, בסגנון סרטוני ההסבר האנכיים: הגרפיקה למעלה, אתם למטה. את התוכן עורכים בפאנל ההגדרות.
    **כתוביות אוטומטיות**: לחצו על **כתוביות**, הדביקו מפתח API של ElevenLabs, ובחרו שפה, כמה מילים בכל כתובית ומיקום. הדיבור מתומלל והכתוביות נוספות למסלול הטקסט, כל אחת בזמן שבו אומרים אותה.
-   **מסך מפוצל**: שימו את הסרטון שלכם (עם הפנים) במסלול הווידאו, ואת הגרפיקה הוסיפו כשכבה עליונה בכפתור השכבות שליד הקובץ בספריית המדיה. בפאנל ההגדרות בוחרים למעלה / למטה / מסך מלא, את הגובה ואת ריכוך הקצה.
+   **מסך מפוצל**: שימו את הסרטון שלכם (עם הפנים) במסלול הווידאו, ואת הגרפיקה הוסיפו כשכבה עליונה בכפתור השכבות שליד הקובץ בספריית המדיה. בפאנל ההגדרות בוחרים למעלה / למטה / מסך מלא, את הגובה ואת ריכוך הקצה. ב**כניסה ויציאה** אפשר לבחור הופעה רכה, החלקה מימין / משמאל / מלמטה, או ללא. למשל: צילום מסך של כתבה כשכבה במסך מלא שמחליקה פנימה מימין מעל הדובר, ויוצאת שוב בסוף.
 4. בחרו גודל **מסגרת** ולחצו על **ייצוא** כדי לשמור את הסרטון כ-MP4.
 
 ליצירת קובץ התקנה למחשב שלכם: `npm run dist`.
