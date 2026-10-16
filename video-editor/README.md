@@ -56,6 +56,8 @@ For the "graphic on top, talking head below" look common in vertical videos:
 
 Layers can overlap: later layers are drawn on top. Each layer fades in and out over a quarter of a second (you can turn this off).
 
+A layer can be a transparent video: a VP8/VP9 WebM with an alpha channel (for example word-highlight captions or a cut-out presenter rendered by Remotion) keeps its transparency in the preview and in the export, where it is decoded with libvpx (FFmpeg's built-in VP9 decoder would drop the alpha).
+
 The interface is in Hebrew and laid out right to left. The timeline and the playback controls stay left to right, because time runs that way in every video editor. Keyboard shortcuts use physical keys, so they work on a Hebrew keyboard layout too.
 
 ### Keyboard shortcuts

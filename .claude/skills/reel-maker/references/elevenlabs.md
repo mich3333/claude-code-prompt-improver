@@ -18,7 +18,7 @@ Create a flow first (`creative_create_flow`) and pass its `flow_id` to every cal
 
 ## Transcription (word timings)
 
-`creative_transcribe_audio` with `model_id: eleven_scribe_v1` and `connect_from` the speech node (or an uploaded audio node). It has cost 0 credits. The result has `transcripts[0].words` with `text`, `type`, `start`, `end` in seconds — save them as `words.json` for captions. Hebrew comes back accurate; delivery tags may appear as words (`[excited]`) and must be dropped.
+`creative_transcribe_audio` with `model_id: eleven_scribe_v1` and `connect_from` the speech node (or an uploaded audio node). It is **not** free: earlier runs showed 0, but an `estimate_only` call in October 2026 priced a 13 s clip at ~15 credits. Always estimate first; when credits are short, transcribe locally instead (`scripts/transcribe.sh`, see `transcription.md`). The result has `transcripts[0].words` with `text`, `type`, `start`, `end` in seconds — save them as `words.json` for captions. Hebrew comes back accurate. Delivery tags may appear as words (`[excited]`); `words.mjs` drops them. Pass the file to `make_reel` as `words` as is (any shape it returns is accepted).
 
 ## Uploading the user's files
 
@@ -29,3 +29,13 @@ Create a flow first (`creative_create_flow`) and pass its `flow_id` to every cal
 `creative_generate_video` with `model_id: bytedance-omnihuman-v1.5`, `connect_from: [photo node, speech node]`, and a prompt describing gestures ("counts on his fingers, points with index finger, opens palms, natural nods"). **Needs a paid ElevenLabs plan** — on a free plan the node cannot be created; do not retry, tell the user in one sentence and offer the alternatives in SKILL.md. Price it with `estimate_only` before running.
 
 Alternatives with the same model: Magnific `video_speak` (mode `omnihuman`, audio up to 30 s; needs credits — check `account_balance`), or Dreamina (CapCut) → AI Avatar → Avatar Pro (OmniHuman 1.5), which the user runs themselves with free daily credits by uploading the photo and the narration mp3.
+
+## Music and sound effects
+
+`audio_music_generate` and `audio_sfx_generate` live on the Magnific connector (balance 0 credits); ElevenLabs Music lives on the ElevenLabs side. Music costs about 900 credits per minute, far more than the free plan has left. ElevenLabs music is cleared for commercial use only on paid plans.
+
+For a music bed, prefer the user's own track or a royalty-free library, and mix it with `finish_audio.mjs --music`. Estimate before generating anything.
+
+## Licence
+
+The free plan includes **no commercial licence** for generated audio, and requires attribution. If the reel promotes a business, say so and suggest the Starter plan, or the user's own voice.

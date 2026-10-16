@@ -170,7 +170,7 @@ export function buildExport(project, opts) {
     if (o.kind === 'image') {
       inputs.push('-loop', '1', '-framerate', String(fps), '-t', num(D + 0.5), '-i', o.path);
     } else {
-      inputs.push('-ss', num(o.in), '-t', num(D), '-i', o.path);
+      inputs.push(...(o.alphaDecoder ? ['-c:v', o.alphaDecoder] : []), '-ss', num(o.in), '-t', num(D), '-i', o.path);
     }
     const r = overlayRect(o, W, H);
     const fit =
@@ -189,7 +189,8 @@ export function buildExport(project, opts) {
     ];
     chains.push(`[${idx}:v]${f.join(',')}[ol${j}]`);
     let src = `ol${j}`;
-    if (r.edge && r.feather > 0) {
+    // A layer with its own alpha keeps it (the soft edge mask would replace it).
+    if (r.edge && r.feather > 0 && !o.alphaDecoder) {
       // Gradient alpha mask, computed once and looped: opaque inside the
       // region, fading to transparent across the edge facing the other half.
       const ramp = r.edge === 'bottom' ? `(${r.h - 1}-Y)/${r.feather}` : `Y/${r.feather}`;

@@ -85,6 +85,10 @@ export async function probe(file) {
   else if (!video || video.disposition?.attached_pic) kind = 'audio';
   if (kind !== 'audio' && !video) throw new Error('לא נמצא וידאו או תמונה בקובץ.');
   if (kind !== 'image' && !(duration > 0)) throw new Error('לא ניתן לקרוא את אורך הקובץ.');
+  // VP8/VP9 WebM with an alpha channel (e.g. Remotion's transparent clips):
+  // FFmpeg's native decoders drop the alpha, libvpx keeps it.
+  const alpha = video?.tags?.alpha_mode === '1' || video?.tags?.ALPHA_MODE === '1';
+  const alphaDecoder = alpha ? ({ vp8: 'libvpx', vp9: 'libvpx-vp9' })[video.codec_name] ?? null : null;
   const rotated = Math.abs(Number(video?.side_data_list?.find((d) => d.rotation != null)?.rotation ?? video?.tags?.rotate ?? 0)) % 180 === 90;
   return {
     path: file,
@@ -93,6 +97,7 @@ export async function probe(file) {
     kind,
     duration,
     hasAudio: Boolean(audio),
+    ...(alphaDecoder ? { alphaDecoder } : {}),
     width: video ? (rotated ? video.height : video.width) : null,
     height: video ? (rotated ? video.width : video.height) : null,
     thumbnail: kind === 'audio' ? null : await thumbnail(file, kind === 'image' ? 0 : Math.min(1, duration / 3)),
