@@ -291,7 +291,7 @@ const Spotlight: React.FC<{ S: Schedule; segs: Segment[] }> = ({ S, segs }) => {
   if (h.shot) {
     // The real article: a screenshot of its top, slowly pushing in, with the
     // icon and key number on a badge in the corner.
-    const zoom = 1 + f * 0.0012;
+    const zoom = 1 + Math.min(f * 0.0006, 0.035); // gentle, so headline edges stay in frame
     return (
       <div
         style={{
@@ -312,7 +312,7 @@ const Spotlight: React.FC<{ S: Schedule; segs: Segment[] }> = ({ S, segs }) => {
       >
         <Img
           src={staticFile(h.shot)}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 0%', transform: `scale(${zoom})`, transformOrigin: '50% 0%' }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 0%', transform: `scale(${zoom})`, transformOrigin: '50% 25%' }}
         />
         <div
           style={{
