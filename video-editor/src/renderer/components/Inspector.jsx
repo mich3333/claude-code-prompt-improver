@@ -11,6 +11,7 @@ import { GRAPHIC_TYPES } from '../../shared/graphics.js';
 import { player, store, ui, useAtom, useStore } from '../state.js';
 import { FONTS, TEXT_STYLES } from '../text-render.js';
 import { PALETTE } from '../../shared/templates.js';
+import { AREA_TOP_MAX, FRAMING_DEFAULTS, framingOf, PRESENTER, ZOOM_MAX } from '../../shared/framing.js';
 import { CAPTION_LOOK } from '../../shared/captions.js';
 import { toast } from '../toast.js';
 import {
@@ -95,10 +96,7 @@ function ClipPanel({ clip }) {
         </Section>
       )}
 
-      <Section title="מסגור">
-        <Segmented value={clip.fit} options={{ contain: 'התאמה (פסים)', cover: 'מילוי (חיתוך)' }}
-          onChange={(v) => apply((c) => { c.fit = v; })} />
-      </Section>
+      <FramingSection clip={clip} />
 
       <Section title="צבע">
         <Segmented layout="grid" value={clip.filter}
@@ -148,6 +146,53 @@ function ClipPanel({ clip }) {
         <Button icon="trash" variant="danger" onClick={actions.remove}>מחיקה</Button>
       </div>
     </div>
+  );
+}
+
+// Where the picture sits in the frame: fit/fill, focus point, zoom, the area
+// it fills (from the top), and a slow push-in. "Presenter" frames a selfie in
+// the lower part of a 9:16 frame, under a split-screen graphic.
+function FramingSection({ clip }) {
+  const f = framingOf(clip);
+  const presenter = () => {
+    store.mutate((p) => {
+      const c = store.selected();
+      if (!c) return;
+      Object.assign(c, PRESENTER);
+      p.aspect = '9:16';
+    });
+    commit();
+    toast('התמונה ממוסגרת בחלק התחתון של מסגרת 9:16. הוסיפו גרפיקה כשכבה עליונה.', 'success', 3500);
+  };
+  return (
+    <Section title="מסגור ותנועה">
+      <Segmented value={clip.fit} options={{ contain: 'התאמה (פסים)', cover: 'מילוי (חיתוך)' }}
+        onChange={(v) => apply((c) => { c.fit = v; })} />
+      <div className="btn-row">
+        <Button id="framing-presenter" onClick={presenter}>מגיש במסך מפוצל</Button>
+      </div>
+      <RangeField id="framing-focus-x" dir="ltr" label="מיקוד אופקי" value={Math.round(f.focusX * 100)} format={pct}
+        onChange={(v) => edit((c) => { c.focusX = v / 100; })} onCommit={commit} />
+      <RangeField id="framing-focus-y" label="מיקוד אנכי" value={Math.round(f.focusY * 100)} format={pct}
+        onChange={(v) => edit((c) => { c.focusY = v / 100; })} onCommit={commit} />
+      <RangeField id="framing-zoom" label="זום" value={Math.round(f.zoom * 100)} min={100} max={ZOOM_MAX * 100} format={pct}
+        onChange={(v) => edit((c) => { c.zoom = v / 100; })} onCommit={commit} />
+      <RangeField label="התמונה מתחילה בגובה" value={Math.round(f.areaTop * 100)} min={0} max={AREA_TOP_MAX * 100}
+        format={pct} onChange={(v) => edit((c) => { c.areaTop = v / 100; })} onCommit={commit} />
+      <CheckField id="framing-push" label="התקרבות איטית (קן ברנס)" checked={f.pushIn} onChange={(v) => apply((c) => { c.pushIn = v; })} />
+      {f.pushIn && (
+        <CheckField label="תזוזה עדינה" checked={f.drift} onChange={(v) => apply((c) => { c.drift = v; })} />
+      )}
+      <div className="insp-note">
+        {clip.fit === 'cover'
+          ? 'המיקוד קובע איזה חלק של התמונה נשאר בחיתוך. 0% = שמאל/למעלה, 100% = ימין/למטה.'
+          : 'במצב התאמה המיקוד מזיז את התמונה בתוך הפסים.'}
+        {f.pushIn && ' ההתקרבות נמשכת לאורך כל הקליפ (עד 7%).'}
+      </div>
+      <div className="btn-row">
+        <Button onClick={() => apply((c) => Object.assign(c, FRAMING_DEFAULTS))}>איפוס מסגור</Button>
+      </div>
+    </Section>
   );
 }
 

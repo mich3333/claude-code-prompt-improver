@@ -6,6 +6,7 @@ A desktop video editor (Electron + React + Motion, with FFmpeg for export) with 
 
 - **Cut and join**: import videos and photos, drag to reorder, trim by dragging clip edges (or set start/end at the playhead), and split at the playhead.
 - **Split screen**: put a photo or video on a layer above the main video, in the top or bottom part of the frame or full frame, with a soft blended edge between the halves.
+- **Photo as presenter**: place a photo or video inside the frame (focus point, zoom 100–150%, the part of the frame it fills) and add a slow push-in (Ken Burns) with an optional drift. One click frames a selfie in the lower part of a 9:16 frame, under the graphics.
 - **Automatic captions**: transcribes the speech in your clips with ElevenLabs Scribe and adds short, punchy captions (1–4 words each) timed to the words.
 - **Text and captions**: multi-line titles with full Hebrew/RTL support, 5 fonts, size, color, bold, shadow/outline/box styles, and fade in/out. Drag text directly on the preview to position it.
 - **Music and audio**: a background music track with volume, start point, "skip intro", loop, and fade in/out. Each clip has its own volume and mute.
@@ -49,7 +50,7 @@ This builds for the OS you run it on: `.dmg` on macOS, an `.exe` installer on Wi
 
 For the "graphic on top, talking head below" look common in vertical videos:
 
-1. Put your talking-head video on the main video track. Frame it so your face sits in the lower half.
+1. Put your talking-head video (or a selfie photo) on the main video track, select it and click **מגיש במסך מפוצל** (presenter for split screen) so your face sits in the lower half. See [Photo as presenter](#photo-as-presenter).
 2. Add the graphic (a photo, screen recording or chart animation) as a layer: click the layers button next to it in the media library (it is placed at the playhead), or drag it onto the **שכבה עליונה** (Overlay) track at the time you want.
 3. In the settings panel, choose **למעלה / למטה / מסך מלא** (top / bottom / full frame), the height of the area (30–70%), and how soft the edge between the halves is.
 4. Drag the layer on the timeline to move it, or drag its edges to trim it. Layers are muted by default, so your voice from the main track carries on; turn on "include sound" if you need the layer's audio.
@@ -71,6 +72,21 @@ The interface is in Hebrew and laid out right to left. The timeline and the play
 | Ctrl+Z / Ctrl+Y (⌘Z / ⌘⇧Z) | Undo / redo |
 | Ctrl+S, Ctrl+O, Ctrl+I, Ctrl+M, Ctrl+E | Save, open, import, music, export |
 | Ctrl + mouse wheel | Zoom timeline |
+
+## Photo as presenter
+
+Any photo or video on the main track can be framed in the settings panel, under **מסגור ותנועה** (framing and motion):
+
+| Setting | What it does |
+| --- | --- |
+| מיקוד אופקי / אנכי (horizontal / vertical focus) | Which part of the picture stays in view when it is cropped, 0–100% (like CSS `object-position`: 0% keeps the left/top edge, 100% the right/bottom). With *Fit* it moves the picture between the black bars. |
+| זום (zoom) | 100–150%, centred on the focus point. |
+| התמונה מתחילה בגובה (picture starts at) | The picture fills the frame from this height down (0–60%); above it the frame is black, ready for a split-screen layer. |
+| התקרבות איטית (slow push-in) | Ken Burns: the picture grows by 7% over the clip, towards the focus point. **תזוזה עדינה** (drift) adds a gentle pan. |
+
+**מגיש במסך מפוצל** (presenter for split screen) does it in one click: the project becomes 9:16, and the picture fills the frame from 42% down (just under the soft edge of a 50% top layer), cropped with the focus 30% from the top (where the face usually is in a selfie), with a slow push-in. Then add the gold graphic as a top layer. **איפוס מסגור** resets the framing. Each change is one undo step.
+
+The export uses the same math as the preview (`src/shared/framing.js`). The push-in is rendered with FFmpeg's `perspective` filter, which samples at sub-pixel positions, so the motion is smooth (FFmpeg's `zoompan` moves in whole pixels and jitters). A framed photo is read and scaled once and repeated, so it exports at about real-time speed at 1080×1920.
 
 ## Automatic captions
 
@@ -153,6 +169,7 @@ src/shared/             pure logic shared by UI and export
   ffmpeg.js             builds the FFmpeg filter graph for a project
   captions.js           automatic captions: what to transcribe, word timing, short caption grouping
   graphics.js           black-and-gold graphics: types, defaults, count-up and bar parsing
+  framing.js            photo/video framing: focus point, zoom, picture area, push-in, export canvas
 src/main/media.js       runs FFprobe/FFmpeg (probe, thumbnails, audio extraction, export with progress)
 src/main/scribe.js      ElevenLabs Scribe speech-to-text client
 src/renderer/           the editor UI in React
@@ -179,6 +196,7 @@ test/                   unit, export and UI tests
    בלשונית **תבניות** יש פתיח, ציטוט, כותרת תחתונה, סיום וצבע חם בסגנון Claude. לחיצה אחת מוסיפה אותם.
    **שחור וזהב**: בלשונית **תבניות** יש מספר גדול, גרף עמודות, ציר שנים וכתוביות אדומות, בסגנון סרטוני ההסבר האנכיים: הגרפיקה למעלה, אתם למטה. את התוכן עורכים בפאנל ההגדרות.
    **כתוביות אוטומטיות**: לחצו על **כתוביות**, הדביקו מפתח API של ElevenLabs, ובחרו שפה, כמה מילים בכל כתובית ומיקום. הדיבור מתומלל והכתוביות נוספות למסלול הטקסט, כל אחת בזמן שבו אומרים אותה.
+   **מגיש במסך מפוצל**: בחרו את התמונה או הסרטון שלכם במסלול הווידאו ולחצו על **מגיש במסך מפוצל** בפאנל ההגדרות. הפנים יורדות לחלק התחתון של מסגרת 9:16, עם התקרבות איטית. אפשר לכוונן את המיקוד, הזום, הגובה שממנו מתחילה התמונה ואת התזוזה העדינה.
    **מסך מפוצל**: שימו את הסרטון שלכם (עם הפנים) במסלול הווידאו, ואת הגרפיקה הוסיפו כשכבה עליונה בכפתור השכבות שליד הקובץ בספריית המדיה. בפאנל ההגדרות בוחרים למעלה / למטה / מסך מלא, את הגובה ואת ריכוך הקצה.
 4. בחרו גודל **מסגרת** ולחצו על **ייצוא** כדי לשמור את הסרטון כ-MP4.
 

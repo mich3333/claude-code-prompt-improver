@@ -93,10 +93,12 @@ export function NumberField({ label, value, onApply, min = 0, max = Infinity, st
 }
 
 // Slider: changes apply live; one undo step is recorded when released.
-export function RangeField({ label, value, onChange, onCommit, min = 0, max = 100, step = 1, format = String }) {
+export function RangeField({ label, value, onChange, onCommit, min = 0, max = 100, step = 1, format = String, dir, id }) {
   return (
     <Row label={label} extra={<span className="insp-value">{format(value)}</span>}>
       <input
+        id={id}
+        dir={dir}
         type="range"
         min={min}
         max={max}
@@ -123,10 +125,10 @@ export function SelectField({ label, options, value, onChange }) {
   );
 }
 
-export function CheckField({ label, checked, onChange }) {
+export function CheckField({ label, checked, onChange, id }) {
   return (
     <label className="insp-check">
-      <input type="checkbox" checked={Boolean(checked)} onChange={(e) => onChange(e.target.checked)} />
+      <input id={id} type="checkbox" checked={Boolean(checked)} onChange={(e) => onChange(e.target.checked)} />
       <span>{label}</span>
     </label>
   );

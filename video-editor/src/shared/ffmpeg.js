@@ -2,6 +2,7 @@
 // Pure: no filesystem or process access, so it is unit-testable.
 
 import { clipOps, toFfmpegFilters } from './effects.js';
+import { framingArea, framingCanvas, isDefaultFraming } from './framing.js';
 import {
   clipDuration, effectiveTransition, layoutClips, OVERLAY_FADE, overlayDuration, overlayRect, totalDuration,
 } from './timeline.js';
@@ -83,6 +84,54 @@ export function laneList(lane, blankPath, fps = 30) {
   return `${lines.join('\n')}\n`;
 }
 
+const ex = (x) => `(${num(x)})`;
+
+// Focus point, zoom, picture area and push-in (see framing.js): scale the
+// picture, apply the colour effects, pad it onto a canvas holding every
+// window the motion visits, then let `perspective` stretch the window for
+// each frame over the canvas (sampled at sub-pixel positions, so the motion
+// is smooth, unlike zoompan's whole pixels) and scale it to the area. The
+// area is padded into the full frame. Matches placePicture() in the preview.
+export function framedChain(clip, W, H, D, fps) {
+  const area = framingArea(clip, W, H);
+  const { w, h } = area;
+  const c = framingCanvas(clip, clip.width, clip.height, w, h);
+  const m = c.motion;
+  // Per frame: progress p (frame `in` at fps), the picture's on-screen width,
+  // and the window's left/top/width/height in canvas pixels.
+  const P = `st(0,clip(in/${ex(D * fps)},0,1))`;
+  const k = `(1+${ex(m.push)}*ld(0))`;
+  const r = `st(1,${ex(m.w0 / c.pw)}*${k})`; // output pixels per picture pixel
+  const left = `-(${w}-${ex(m.w0)}*${k})*(${ex(m.ax)}+${ex(m.bx - m.ax)}*ld(0))/ld(1)-${ex(c.cx)}`;
+  const top = `-(${h}-${ex(m.h0)}*${k})*(${ex(m.ay)}+${ex(m.by - m.ay)}*ld(0))/ld(1)-${ex(c.cy)}`;
+  const prep = [
+    `scale=${c.pw}:${c.ph}:flags=bicubic`,
+    'setsar=1',
+    ...toFfmpegFilters(clipOps(clip)),
+    `pad=${c.padW}:${c.padH}:${c.padX}:${c.padY}:color=black`,
+    `crop=${c.cw}:${c.ch}:${c.cropX}:${c.cropY}`,
+    // A photo is read once (not looped at the input), so it is scaled once and repeated here.
+    ...(clip.kind === 'image' ? ['loop=loop=-1:size=1', `setpts=N/${fps}/TB`] : []),
+  ];
+  const fill = ['setsar=1', ...(h < H ? [`pad=${W}:${H}:0:${area.y}:color=black`] : [])];
+  if (!c.moving) {
+    // A still framing: one fixed window, so a plain crop is enough.
+    const r = m.w0 / c.pw;
+    const wx = Math.round(-((w - m.w0) * m.ax) / r - c.cx);
+    const wy = Math.round(-((h - m.h0) * m.ay) / r - c.cy);
+    return [...prep, `crop=${Math.round(w / r)}:${Math.round(h / r)}:${wx}:${wy}`, `scale=${w}:${h}:flags=area`, ...fill];
+  }
+  const X = (right) => `'${P};${r};${left}${right ? `+${w}/ld(1)` : ''}'`;
+  const Y = (bottom) => `'${P};${r};${top}${bottom ? `+${h}/ld(1)` : ''}'`;
+  return [
+    ...prep,
+    'format=yuv444p',
+    `perspective=x0=${X(false)}:y0=${Y(false)}:x1=${X(true)}:y1=${Y(false)}:x2=${X(false)}:y2=${Y(true)}:x3=${X(true)}:y3=${Y(true)}:interpolation=cubic:eval=frame`,
+    `scale=${w}:${h}:flags=area`,
+    ...fill,
+  ];
+}
+
 export function buildExport(project, opts) {
   const { width: W, height: H, fps = 30, crf = 20, preset = 'veryfast' } = opts;
   const clips = project.clips;
@@ -94,8 +143,11 @@ export function buildExport(project, opts) {
 
   clips.forEach((clip, i) => {
     const D = clipDuration(clip);
+    const framed = clip.kind !== 'card' && clip.width > 0 && clip.height > 0 && !isDefaultFraming(clip);
     if (clip.kind === 'card') {
       inputs.push('-f', 'lavfi', '-t', num(D + 0.5), '-i', `color=c=${hexColor(clip.color)}:s=${W}x${H}:r=${fps}`);
+    } else if (clip.kind === 'image' && framed) {
+      inputs.push('-i', clip.path);
     } else if (clip.kind === 'image') {
       inputs.push('-loop', '1', '-framerate', String(fps), '-t', num(D + 0.5), '-i', clip.path);
     } else {
@@ -103,8 +155,9 @@ export function buildExport(project, opts) {
     }
 
     // Effects run before padding so letterbox bars stay black, as in the preview.
-    const fit =
-      clip.fit === 'cover'
+    const fit = framed
+      ? framedChain(clip, W, H, D, fps)
+      : clip.fit === 'cover'
         ? [`scale=${W}:${H}:force_original_aspect_ratio=increase`, `crop=${W}:${H}`, 'setsar=1', ...toFfmpegFilters(clipOps(clip))]
         : [
             `scale=${W}:${H}:force_original_aspect_ratio=decrease:force_divisible_by=2`,

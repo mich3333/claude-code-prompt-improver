@@ -5,6 +5,7 @@ import { clipOps, toCssFilter } from '../shared/effects.js';
 import {
   frameSize, layoutClips, locate, overlayAlpha, overlayDuration, overlayRect, sourceTime, totalDuration,
 } from '../shared/timeline.js';
+import { framingArea, framingProgress, placePicture } from '../shared/framing.js';
 import { drawText, measureText, textAlpha } from './text-render.js';
 import { textRiseOffset } from '../shared/ffmpeg.js';
 
@@ -261,14 +262,14 @@ export class Player {
     const sh = el?.videoHeight || el?.naturalHeight;
     const ready = el && (clip.kind === 'image' ? el.complete && sw : el.readyState >= 2);
     if (ready && sw && sh) {
-      const scale = clip.fit === 'cover' ? Math.max(W / sw, H / sh) : Math.min(W / sw, H / sh);
-      const dw = sw * scale;
-      const dh = sh * scale;
+      // Fit/fill plus focus point, zoom, picture area and push-in (same math as the export).
+      const area = framingArea(clip, W, H);
+      const pl = placePicture(clip, sw, sh, area.w, area.h, framingProgress(seg, this.time));
       ctx.beginPath();
-      ctx.rect(x, 0, W, H);
+      ctx.rect(x + area.x, area.y, area.w, area.h);
       ctx.clip();
       ctx.filter = toCssFilter(clipOps(clip));
-      ctx.drawImage(el, x + (W - dw) / 2, (H - dh) / 2, dw, dh);
+      ctx.drawImage(el, x + area.x + pl.x, area.y + pl.y, pl.w, pl.h);
     } else if (el?.error) {
       ctx.fillStyle = '#e5484d';
       ctx.font = `${Math.round(H * 0.04)}px sans-serif`;
