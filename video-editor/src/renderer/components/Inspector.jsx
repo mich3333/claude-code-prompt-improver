@@ -169,6 +169,21 @@ function GraphicContent({ overlay }) {
   return (
     <Section title={`תוכן: ${GRAPHIC_TYPES[g.type]?.name ?? 'גרפיקה'}`}>
       {field('כותרת', 'label', { id: 'graphic-label' })}
+      {field('משך (שניות)', 'duration', { id: 'graphic-duration', type: 'number', min: 2, max: 60, step: 0.5, dir: 'ltr' })}
+      {g.type === 'quote' && (
+        <>
+          {field('מי', 'who', { id: 'graphic-who' })}
+          {field('איפה ומתי', 'where', { id: 'graphic-where' })}
+          <textarea id="graphic-quote" className="graphic-values" rows={3} value={g.quote ?? ''} onChange={set('quote')}
+            placeholder="המילים המקוריות (ציטוט או כותרת)" />
+          <label className="insp-check">
+            <input type="checkbox" checked={Boolean(g.headline)} onChange={set('headline')} />
+            <span>זו כותרת של כתבה (בלי מירכאות)</span>
+          </label>
+          <textarea id="graphic-he" rows={2} dir="rtl" value={g.he ?? ''} onChange={set('he')} placeholder="תרגום לעברית" />
+          {field('קישור', 'url', { id: 'graphic-url', dir: 'ltr' })}
+        </>
+      )}
       {g.type === 'number' && field('המספר', 'value', { id: 'graphic-value', dir: 'ltr' })}
       {g.type === 'number' && field('הערה', 'note')}
       {g.type === 'bars' && (
@@ -180,7 +195,7 @@ function GraphicContent({ overlay }) {
           {field('אחרי הערך', 'suffix', { dir: 'ltr' })}
         </>
       )}
-      {g.type !== 'year' && (
+      {g.type !== 'year' && g.type !== 'quote' && (
         <label className="insp-check">
           <input type="checkbox" checked={Boolean(g.years)} onChange={set('years')} />
           <span>ציר שנים למעלה</span>

@@ -16,7 +16,7 @@ export const GOLD = {
 };
 
 export const GRAPHIC_FPS = 30;
-export const GRAPHIC_DURATION = 4; // seconds on the timeline
+export const GRAPHIC_DURATION = 4; // default seconds on the timeline (editable per graphic)
 export const GRAPHIC_ANIMATION = 1.8; // seconds of motion; the rest holds the last frame
 
 export const GRAPHIC_TYPES = {
@@ -30,6 +30,17 @@ export const GRAPHIC_TYPES = {
     description: 'עמודות זהב שגדלות אחת אחרי השנייה',
     defaults: { label: 'הכנסות בשנה', values: '2023: 1\n2024: 4\n2025: 9\n2026: 20', prefix: '$', suffix: 'B', years: false, from: 2021, to: 2026, active: 2025 },
   },
+  quote: {
+    name: 'כרטיס מקור',
+    description: 'ציטוט או כותרת של כתבה במסך מלא, עם תרגום ומקור',
+    full: true,
+    defaults: {
+      label: 'התחזית', who: 'Sam Altman', where: 'The Gentle Singularity · יוני 2025',
+      quote: '2026 will likely see the arrival of systems that can figure out novel insights.',
+      he: 'ב-2026 כנראה יגיעו מערכות שמגיעות לתובנות חדשות', url: 'blog.samaltman.com/the-gentle-singularity',
+      headline: false, years: false,
+    },
+  },
   year: {
     name: 'ציר שנים',
     description: 'שנה גדולה וציר זמן עם נקודה זהובה',
@@ -40,13 +51,20 @@ export const GRAPHIC_TYPES = {
 export function createGraphic(type) {
   const def = GRAPHIC_TYPES[type];
   if (!def) throw new Error(`Unknown graphic: ${type}`);
-  return { type, ...def.defaults };
+  return { type, duration: GRAPHIC_DURATION, ...def.defaults };
 }
 
-// Pixel size of a graphic: the top half of the project's frame at 1080p.
-export function graphicSize(aspect) {
+// Seconds a graphic lasts: at least its animation, at most a minute.
+export function graphicDuration(g) {
+  const d = Number(g?.duration);
+  return Math.min(60, Math.max(GRAPHIC_ANIMATION + 0.2, Number.isFinite(d) && d > 0 ? d : GRAPHIC_DURATION));
+}
+
+// Pixel size of a graphic at 1080p: the top half of the frame, or the whole
+// frame for full-screen types (source cards).
+export function graphicSize(aspect, type) {
   const { width, height } = frameSize(aspect, 1080);
-  return { width, height: Math.round(height / 4) * 2 };
+  return GRAPHIC_TYPES[type]?.full ? { width, height } : { width, height: Math.round(height / 4) * 2 };
 }
 
 // "$416B" -> { prefix: '$', number: 416, decimals: 0, suffix: 'B', grouped: false }

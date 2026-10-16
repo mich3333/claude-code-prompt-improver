@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  createGraphic, formatCountUp, graphicSize, GRAPHIC_TYPES, parseBars, parseCountUp, yearRange,
+  createGraphic, formatCountUp, graphicDuration, graphicSize, GRAPHIC_TYPES, parseBars, parseCountUp, yearRange,
 } from '../../src/shared/graphics.js';
 import { captionTexts, CAPTION_LOOKS } from '../../src/shared/captions.js';
 
@@ -31,6 +31,7 @@ test('graphics have defaults, a year strip of at most 8 years, and top-half size
   assert.equal(yearRange({ from: 2000, to: 2030 }).length, 8);
   assert.deepEqual(graphicSize('9:16'), { width: 1080, height: 960 });
   assert.deepEqual(graphicSize('16:9'), { width: 1920, height: 540 });
+  assert.deepEqual(graphicSize('9:16', 'quote'), { width: 1080, height: 1920 }, 'source cards fill the frame');
 });
 
 test('captions can use the red reference look', () => {
@@ -39,4 +40,13 @@ test('captions can use the red reference look', () => {
   assert.equal(red.y, 0.5);
   const [classic] = captionTexts([{ start: 0, end: 1, text: 'שלום' }]);
   assert.equal(classic.color, '#ffffff');
+});
+
+test('graphic duration defaults to 4s and is clamped to the animation and a minute', () => {
+  assert.equal(graphicDuration(createGraphic('number')), 4);
+  assert.equal(graphicDuration({ duration: 6 }), 6);
+  assert.equal(graphicDuration({ duration: '6.5' }), 6.5);
+  assert.equal(graphicDuration({ duration: 0.5 }), 2);
+  assert.equal(graphicDuration({ duration: 600 }), 60);
+  assert.equal(graphicDuration({}), 4);
 });

@@ -66,6 +66,7 @@ function GoldPreview({ type }) {
     );
   }
   if (type === 'year') return <span className="gold-year">2021</span>;
+  if (type === 'quote') return <span className="gold-quote"><span /><span /><span /></span>;
   if (type === 'captions') return <span className="gold-caption">ככה זה מתחיל</span>;
   return <span className="gold-number">$2T</span>;
 }

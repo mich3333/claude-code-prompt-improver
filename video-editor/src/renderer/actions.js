@@ -78,7 +78,10 @@ export async function addGraphic(type) {
   ui.graphicBusy.set(true);
   try {
     const item = await renderGraphicVideo(g, store.project.aspect);
-    const overlay = { ...createOverlay(item, at), name: GRAPHIC_TYPES[type].name, feather: 0.1, graphic: g };
+    const overlay = {
+      ...createOverlay(item, at), name: GRAPHIC_TYPES[type].name, feather: 0.1, graphic: g,
+      ...(GRAPHIC_TYPES[type].full ? { region: 'full' } : {}),
+    };
     store.update((p) => {
       p.media.push({ ...item, id: newId('media'), name: GRAPHIC_TYPES[type].name });
       p.overlays ??= [];

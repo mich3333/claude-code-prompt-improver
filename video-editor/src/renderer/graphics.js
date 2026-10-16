@@ -2,7 +2,7 @@
 // short video (encoded by the main process), placed as a split-screen layer.
 
 import {
-  easeOutCubic, formatCountUp, GOLD, GRAPHIC_ANIMATION, GRAPHIC_DURATION, GRAPHIC_FPS, graphicSize, parseBars,
+  easeOutCubic, formatCountUp, GOLD, GRAPHIC_ANIMATION, GRAPHIC_FPS, graphicDuration, graphicSize, parseBars,
   parseCountUp, yearRange,
 } from '../shared/graphics.js';
 import { textDirection } from '../shared/timeline.js';
@@ -200,7 +200,118 @@ function drawYear(ctx, W, H, t, g) {
   ctx.restore();
 }
 
-const DRAW = { number: drawNumber, bars: drawBars, year: drawYear };
+// Greedy word wrap for one paragraph.
+function wrapLines(ctx, text, maxWidth) {
+  const lines = [];
+  let line = '';
+  for (const word of String(text ?? '').split(/\s+/).filter(Boolean)) {
+    const next = line ? `${line} ${word}` : word;
+    if (line && ctx.measureText(next).width > maxWidth) {
+      lines.push(line);
+      line = word;
+    } else line = next;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+// Full-screen source card: who said it, where and when, the original words on
+// a cream card, a Hebrew translation and the link. Each part arrives in turn.
+function drawQuote(ctx, W, H, t, g) {
+  const s = Math.min(W / 1080, H / 1920);
+  const padX = W * 0.083;
+  const right = W - padX;
+  const rise = (start, dist = 26) => (1 - easeOutCubic((t - start) / 0.45)) * dist * s;
+  const at = (x, y, text, { weight, px, color, dir = 'rtl', align = 'right', alpha = 1, font: family = FONT, maxWidth = W - 2 * padX }) => {
+    if (!text || alpha <= 0) return;
+    ctx.save();
+    ctx.globalAlpha *= alpha;
+    ctx.direction = dir;
+    ctx.textAlign = align;
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = color;
+    ctx.font = `${weight} ${Math.round(px)}px ${family}`;
+    const w = ctx.measureText(text).width;
+    if (w > maxWidth) ctx.font = `${weight} ${Math.round((px * maxWidth) / w)}px ${family}`; // long links shrink to fit
+    ctx.fillText(text, x, y);
+    ctx.restore();
+  };
+
+  // Header: kicker, name, where/when.
+  let y = H * 0.29;
+  at(right, y + rise(0.05), g.label, { weight: 700, px: 38 * s, color: GOLD.gold, alpha: fade(t, 0.05) });
+  y += 92 * s;
+  ctx.save();
+  ctx.font = font(800, 84 * s);
+  const whoPx = Math.min(84 * s, (84 * s * (W - 2 * padX)) / Math.max(1, ctx.measureText(g.who || ' ').width));
+  ctx.restore();
+  at(right, y + rise(0.12), g.who, { weight: 800, px: whoPx, color: GOLD.text, dir: textDirection(g.who), alpha: fade(t, 0.12) });
+  y += 60 * s;
+  at(right, y + rise(0.25), g.where, { weight: 500, px: 36 * s, color: GOLD.muted, dir: textDirection(g.where), alpha: fade(t, 0.25) });
+
+  // Card geometry from the wrapped text.
+  const cardX = padX;
+  const cardW = W - 2 * padX;
+  const inner = cardW - 2 * 60 * s;
+  const qPx = (g.headline ? 76 : 62) * s;
+  const serif = `Georgia, 'Times New Roman', serif`;
+  ctx.save();
+  ctx.font = `700 ${Math.round(qPx)}px ${serif}`;
+  const quote = g.headline ? String(g.quote ?? '') : `“${String(g.quote ?? '').replace(/^[“"]|[”"]$/g, '')}”`;
+  const qLines = wrapLines(ctx, quote, inner);
+  ctx.font = font(700, 44 * s);
+  const hLines = wrapLines(ctx, g.he, inner);
+  ctx.restore();
+  const qLH = qPx * 1.2;
+  const hLH = 44 * s * 1.35;
+  const cardH = 64 * s * 2 + qLines.length * qLH + (hLines.length ? 36 * s + hLines.length * hLH : 0);
+  const cardY = y + 70 * s;
+
+  // The card slides up into place; its gold edge wipes down.
+  const cp = easeOutCubic((t - 0.35) / 0.55);
+  if (cp > 0) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, cp * 1.4);
+    ctx.translate(0, (1 - cp) * 90 * s);
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 90 * s;
+    ctx.shadowOffsetY = 30 * s;
+    ctx.fillStyle = GOLD.text;
+    ctx.beginPath();
+    ctx.roundRect(cardX, cardY, cardW, cardH, 28 * s);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.strokeStyle = rgba(GOLD.gold, 0.6);
+    ctx.lineWidth = 2 * s;
+    ctx.stroke();
+    const edge = easeOutCubic((t - 0.55) / 0.5);
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(cardX, cardY, cardW, cardH, 28 * s);
+    ctx.clip();
+    ctx.fillStyle = goldFill(ctx, cardY, cardY + cardH);
+    ctx.fillRect(cardX, cardY, 14 * s, cardH * edge);
+    ctx.restore();
+
+    // Original words, line by line, then the translation.
+    let ty = cardY + 64 * s + qPx * 0.9;
+    qLines.forEach((line, i) => {
+      const a = fade(t, 0.6 + i * 0.1, 0.35);
+      at(cardX + 60 * s, ty + rise(0.6 + i * 0.1, 18), line, { weight: 700, px: qPx, color: '#141413', dir: 'ltr', align: 'left', alpha: a, font: serif });
+      ty += qLH;
+    });
+    ty += hLines.length ? 36 * s - qLH + hLH : 0;
+    const hStart = 0.7 + qLines.length * 0.1;
+    hLines.forEach((line) => {
+      at(cardX + cardW - 60 * s, ty, line, { weight: 700, px: 44 * s, color: '#3a3833', alpha: fade(t, hStart, 0.4) });
+      ty += hLH;
+    });
+    ctx.restore();
+  }
+  at(right, cardY + cardH + 74 * s, g.url, { weight: 500, px: 30 * s, color: GOLD.muted, dir: 'ltr', alpha: fade(t, 1.25) });
+}
+
+const DRAW = { number: drawNumber, bars: drawBars, year: drawYear, quote: drawQuote };
 
 export function drawGraphic(ctx, W, H, t, g) {
   ctx.save();
@@ -222,7 +333,7 @@ async function ensureFonts() {
 // holds the last frame for the rest of the duration.
 export async function renderGraphicVideo(g, aspect) {
   await ensureFonts();
-  const { width, height } = graphicSize(aspect);
+  const { width, height } = graphicSize(aspect, g.type);
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
@@ -235,6 +346,6 @@ export async function renderGraphicVideo(g, aspect) {
     frames.push(new Uint8Array(await blob.arrayBuffer()));
   }
   return window.api.encodeGraphic({
-    frames, fps: GRAPHIC_FPS, hold: GRAPHIC_DURATION - GRAPHIC_ANIMATION, name: g.type,
+    frames, fps: GRAPHIC_FPS, hold: graphicDuration(g) - GRAPHIC_ANIMATION, name: g.type,
   });
 }
