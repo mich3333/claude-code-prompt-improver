@@ -3,6 +3,7 @@ import { AbsoluteFill, Audio, Easing, interpolate, random, spring, staticFile, u
 import { Logo } from './brands';
 import { COLORS, H, W, Waves } from './ui';
 import { Captions, firstSpoken, type Word } from './captions';
+import { AnimatedIcon } from './icons';
 import { HEADLINES, MONTHS, type Headline } from './year2026';
 
 // "News storm": the year's headline cards fly in and pile up, line up into a
@@ -226,6 +227,114 @@ const MonthDivider: React.FC<{ month: number; y: number; opacity: number }> = ({
   </div>
 );
 
+// The card nearest the centre of the screen while the wall scrolls.
+const litIndex = (frame: number, S: Schedule) => {
+  if (frame < S.scrollStart || frame >= S.explode) return -1;
+  const cam = camY(frame, S);
+  let best = 0;
+  layout.cards.forEach((y, i) => {
+    if (Math.abs(y - cam) < Math.abs(layout.cards[best] - cam)) best = i;
+  });
+  return best;
+};
+
+const StatCount: React.FC<{ stat: string; f: number }> = ({ stat, f }) => {
+  const m = /^(\D*?)(\d+(?:\.\d+)?)(.*)$/.exec(stat);
+  if (!m) return <>{stat}</>;
+  const target = Number(m[2]);
+  const decimals = m[2].includes('.') ? m[2].split('.')[1].length : 0;
+  const p = interpolate(f, [4, 26], [0, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
+  return (
+    <>
+      {m[1]}
+      {(target * p).toFixed(decimals)}
+      {m[3]}
+    </>
+  );
+};
+
+// Which card the spotlight shows over time: the centred card, but only once it
+// has stayed centred for a moment, so a fast camera move doesn't flicker it.
+const spotlightSegments = (S: Schedule) => {
+  const segs: { from: number; to: number; i: number }[] = [];
+  for (let f = S.scrollStart; f < S.explode; f++) {
+    const i = litIndex(f, S);
+    const last = segs[segs.length - 1];
+    if (last && last.i === i) last.to = f + 1;
+    else segs.push({ from: f, to: f + 1, i });
+  }
+  const MIN = 14;
+  const kept: typeof segs = [];
+  for (const seg of segs) {
+    const prev = kept[kept.length - 1];
+    if (seg.to - seg.from < MIN && prev) prev.to = seg.to;
+    else if (prev && prev.i === seg.i) prev.to = seg.to;
+    else kept.push({ ...seg });
+  }
+  return kept;
+};
+
+// A panel at the top with the current card's animated icon and key number.
+type Segment = { from: number; to: number; i: number };
+
+const Spotlight: React.FC<{ S: Schedule; segs: Segment[] }> = ({ S, segs }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const seg = segs.find((x) => frame >= x.from && frame < x.to);
+  if (!seg) return null;
+  const i = seg.i;
+  const f = frame - seg.from;
+  const s = spring({ frame: f, fps, config: { damping: 13, stiffness: 170, mass: 0.7 } });
+  const fadeOut =
+    interpolate(frame, [S.scrollStart, S.scrollStart + 10], [0, 1], clamp) * interpolate(frame, [S.explode - 12, S.explode], [1, 0], clamp);
+  const h = HEADLINES[i];
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 150,
+        left: 120,
+        right: 120,
+        height: 330,
+        borderRadius: 40,
+        background: '#0d0b08',
+        border: `2px solid ${COLORS.cardBorder}`,
+        boxShadow: '0 30px 80px rgba(0,0,0,0.6), 0 0 60px rgba(226,181,76,0.12)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 40,
+        direction: 'rtl',
+        transform: `scale(${0.9 + s * 0.1})`,
+        opacity: fadeOut,
+        zIndex: 5,
+      }}
+    >
+      <AnimatedIcon kind={h.icon} f={f} fps={fps} size={230} />
+      {h.stat ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+          <span
+            style={{
+              fontSize: 128,
+              fontWeight: 800,
+              lineHeight: 1,
+              direction: 'ltr',
+              background: `linear-gradient(180deg, ${COLORS.goldLight}, ${COLORS.gold} 55%, ${COLORS.goldDark})`,
+              WebkitBackgroundClip: 'text',
+              color: 'transparent',
+            }}
+          >
+            <StatCount stat={h.stat} f={f} />
+          </span>
+          <span style={{ fontSize: 30, color: COLORS.muted, unicodeBidi: 'plaintext' }}>{`${h.outlet} · ${h.date}`}</span>
+        </div>
+      ) : (
+        <span style={{ fontSize: 40, fontWeight: 700, color: COLORS.gold, unicodeBidi: 'plaintext' }}>{`${h.outlet} · ${h.date}`}</span>
+      )}
+    </div>
+  );
+};
+
 const Title: React.FC<{ S: Schedule }> = ({ S }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -275,6 +384,8 @@ export const Year2026: React.FC<YearProps> = ({ voice, words }) => {
   const { fps } = useVideoConfig();
   const S = React.useMemo(() => (words?.length ? scheduleFromWords(words, fps) : fixedSchedule), [words, fps]);
   const cam = camY(frame, S);
+  const segs = React.useMemo(() => spotlightSegments(S), [S]);
+  const spot = segs.find((x) => frame >= x.from && frame < x.to)?.i ?? -1;
   const dividerOpacity =
     interpolate(frame, [S.scrollStart - 20, S.scrollStart + 10], [0, 1], clamp) *
     interpolate(frame, [S.explode - 10, S.explode + 15], [1, 0], clamp);
@@ -290,12 +401,13 @@ export const Year2026: React.FC<YearProps> = ({ voice, words }) => {
         ))}
         <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d' }}>
           {order.map(({ p, i }) => {
-            const wallY = layout.cards[i] - cam + CENTER;
-            const lit = frame > S.scrollStart && frame < S.explode ? Math.max(0, 1 - Math.abs(wallY - CENTER) / 260) : 0;
+            // The highlighted card is the one in the spotlight, so the two always match.
+            const lit = i === spot ? 1 : 0;
             return <NewsCard key={i} h={HEADLINES[i]} pose={p} lit={lit} />;
           })}
         </div>
       </AbsoluteFill>
+      <Spotlight S={S} segs={segs} />
       <Title S={S} />
       {words?.length ? <Captions words={words} top={1600} /> : null}
       {voice && <Audio src={staticFile(voice)} />}
