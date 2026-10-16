@@ -1,9 +1,9 @@
-// Properties panel for the selected clip, text or music (or the project).
+// Properties panel for the selected clip, overlay, text or music (or the project).
 
 import { PRESETS } from '../../shared/effects.js';
 import {
-  ASPECTS, clipDuration, effectiveTransition, formatTime, layoutClips, MIN_CLIP_DURATION,
-  sourceTime, SPEEDS, totalDuration, TRANSITIONS,
+  ASPECTS, clipDuration, effectiveTransition, formatTime, layoutClips, MIN_CLIP_DURATION, OVERLAY_REGIONS,
+  overlayDuration, sourceTime, SPEEDS, totalDuration, TRANSITIONS,
 } from '../../shared/timeline.js';
 import { actions } from '../actions.js';
 import { player, store, useStore } from '../state.js';
@@ -141,6 +141,82 @@ function ClipPanel({ clip }) {
 
       <div className="btn-row actions">
         <Button icon="split" onClick={actions.split}>פיצול בסמן</Button>
+        <Button icon="copy" onClick={actions.duplicate}>שכפול</Button>
+        <Button icon="trash" variant="danger" onClick={actions.remove}>מחיקה</Button>
+      </div>
+    </div>
+  );
+}
+
+function OverlayPanel({ overlay }) {
+  const isImage = overlay.kind === 'image';
+  const split = overlay.region !== 'full';
+  const info = isImage
+    ? 'תמונה בשכבה העליונה'
+    : `וידאו בשכבה העליונה · ${formatTime(overlay.sourceDuration, true)}`;
+  return (
+    <div className="insp">
+      <div className="insp-title">
+        <strong dir="auto">{overlay.name}</strong>
+        <span>{info}</span>
+      </div>
+
+      <Section title="מסך מפוצל">
+        <Segmented value={overlay.region} options={OVERLAY_REGIONS}
+          onChange={(v) => apply((o) => { o.region = v; })} />
+        {split && (
+          <>
+            <RangeField label="גובה" value={Math.round(overlay.split * 100)} min={30} max={70} format={pct}
+              onChange={(v) => edit((o) => { o.split = v / 100; })} onCommit={commit} />
+            <RangeField label="ריכוך הקצה" value={Math.round(overlay.feather * 100)} min={0} max={25} format={pct}
+              onChange={(v) => edit((o) => { o.feather = v / 100; })} onCommit={commit} />
+          </>
+        )}
+        <Segmented value={overlay.fit} options={{ cover: 'מילוי (חיתוך)', contain: 'התאמה (פסים)' }}
+          onChange={(v) => apply((o) => { o.fit = v; })} />
+        <div className="insp-note">
+          {split
+            ? 'הווידאו הראשי ממשיך מתחת. כדאי שהפנים בו יהיו בחצי השני של המסגרת.'
+            : 'השכבה מכסה את כל המסגרת בזמן שהיא מוצגת.'}
+        </div>
+      </Section>
+
+      <Section title="תזמון">
+        <NumberField label="מתחילה ב-" value={overlay.start} max={36000}
+          onApply={(v) => apply((o) => { o.start = v; })} />
+        {isImage ? (
+          <NumberField label="הצג למשך" value={overlay.out} min={MIN_CLIP_DURATION} max={600}
+            onApply={(v) => apply((o) => { o.out = v; })} />
+        ) : (
+          <>
+            <NumberField label="מתוך הקובץ: מ-" value={overlay.in} max={overlay.sourceDuration}
+              onApply={(v) => apply((o) => { o.in = Math.min(v, o.out - MIN_CLIP_DURATION); })} />
+            <NumberField label="עד" value={overlay.out} max={overlay.sourceDuration}
+              onApply={(v) => apply((o) => { o.out = Math.max(v, o.in + MIN_CLIP_DURATION); })} />
+          </>
+        )}
+        <div className="btn-row">
+          <Button onClick={() => {
+            const now = player.time;
+            apply((o) => { o.start = now; });
+          }}>התחלה בסמן</Button>
+        </div>
+        <CheckField label="כניסה ויציאה רכות" checked={overlay.fade} onChange={(v) => apply((o) => { o.fade = v; })} />
+        <div className="insp-note">על ציר הזמן: <span dir="ltr">{formatTime(overlay.start, true)}–{formatTime(overlay.start + overlayDuration(overlay), true)}</span></div>
+      </Section>
+
+      {overlay.hasAudio && (
+        <Section title="שמע">
+          <CheckField label="לכלול את הסאונד של השכבה" checked={!overlay.muted}
+            onChange={(v) => apply((o) => { o.muted = !v; })} />
+          {!overlay.muted && (
+            <RangeField label="עוצמה" value={Math.round(overlay.volume * 100)} format={pct}
+              onChange={(v) => edit((o) => { o.volume = v / 100; })} onCommit={commit} />
+          )}
+        </Section>
+      )}
+
+      <div className="btn-row actions">
         <Button icon="copy" onClick={actions.duplicate}>שכפול</Button>
         <Button icon="trash" variant="danger" onClick={actions.remove}>מחיקה</Button>
       </div>
@@ -290,7 +366,7 @@ function ProjectPanel() {
       <div className="insp-title">
         <strong>פרויקט</strong>
         <span>
-          {p.clips.length} קליפים · {p.texts.length} טקסטים · {p.music ? 'עם מוזיקה' : 'בלי מוזיקה'} · {formatTime(totalDuration(p), true)}
+          {p.clips.length} קליפים · {(p.overlays ?? []).length ? `${p.overlays.length} שכבות · ` : ''}{p.texts.length} טקסטים · {p.music ? 'עם מוזיקה' : 'בלי מוזיקה'} · {formatTime(totalDuration(p), true)}
         </span>
       </div>
       <Section title="גודל מסגרת">
@@ -311,7 +387,13 @@ function ProjectPanel() {
           ))}
         </dl>
       </Section>
-      <div className="insp-note">בחרו קליפ, טקסט או את פס המוזיקה כדי לערוך אותם.</div>
+      <Section title="מסך מפוצל">
+        <div className="insp-note">
+          כדי לשים גרפיקה למעלה ואת הפנים למטה: שימו את הסרטון שלכם במסלול הווידאו, ואת הגרפיקה הוסיפו כשכבה עליונה
+          (כפתור השכבות בספריית המדיה, או גרירה למסלול ״שכבה עליונה״).
+        </div>
+      </Section>
+      <div className="insp-note">בחרו קליפ, שכבה, טקסט או את פס המוזיקה כדי לערוך אותם.</div>
     </div>
   );
 }
@@ -322,6 +404,7 @@ export function Inspector() {
   const target = store.selected();
   let panel = <ProjectPanel />;
   if (sel?.type === 'clip' && target) panel = target.kind === 'card' ? <CardPanel card={target} /> : <ClipPanel clip={target} />;
+  else if (sel?.type === 'overlay' && target) panel = <OverlayPanel overlay={target} />;
   else if (sel?.type === 'text' && target) panel = <TextPanel text={target} />;
   else if (sel?.type === 'music' && target) panel = <MusicPanel music={target} />;
   // Keyed by selection: switching items swaps the panel instantly (selection

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { formatTime } from '../../shared/timeline.js';
 import { TEMPLATES } from '../../shared/templates.js';
-import { actions, addMediaToTimeline } from '../actions.js';
+import { actions, addMediaToTimeline, addOverlay } from '../actions.js';
 import { enter, exit } from '../motion.js';
 import { store, useStore } from '../state.js';
 import { Icon } from './Icon.jsx';
@@ -39,9 +39,15 @@ function MediaList() {
                 {m.kind === 'image' ? 'תמונה' : `${m.kind === 'audio' ? 'שמע' : 'וידאו'} · ${formatTime(m.duration)}`}
               </div>
             </div>
-            <IconButton icon={m.kind === 'audio' ? 'music' : 'plus'} size={16}
-              label={m.kind === 'audio' ? 'שימוש כמוזיקת רקע' : 'הוספה לסוף ציר הזמן'}
-              onClick={() => addMediaToTimeline(m)} />
+            <div className="bin-actions">
+              {m.kind !== 'audio' && (
+                <IconButton icon="layers" size={16} className="bin-overlay" label="הוספה כשכבה עליונה (מסך מפוצל) בסמן הניגון"
+                  onClick={() => addOverlay(m)} />
+              )}
+              <IconButton icon={m.kind === 'audio' ? 'music' : 'plus'} size={16}
+                label={m.kind === 'audio' ? 'שימוש כמוזיקת רקע' : 'הוספה לסוף ציר הזמן'}
+                onClick={() => addMediaToTimeline(m)} />
+            </div>
           </motion.div>
         ))}
       </AnimatePresence>

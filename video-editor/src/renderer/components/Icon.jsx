@@ -16,6 +16,7 @@ const PATHS = {
   plus: 'M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z',
   fit: 'M3 3h6v2H5v4H3zm12 0h6v6h-2V5h-4zM3 15h2v4h4v2H3zm16 0h2v6h-6v-2h4z',
   copy: 'M8 3h12v12h-2V5H8zM4 7h12v14H4z',
+  layers: 'M12 3 2 8.5l10 5.5 10-5.5zM4.6 12.2 2 13.6l10 5.5 10-5.5-2.6-1.4L12 16.3z',
   check: 'M9.5 16.2 5.3 12l-1.4 1.4 5.6 5.6L20.1 8.4 18.7 7z',
   alert: 'M11 7h2v6h-2zm0 8h2v2h-2zM12 2 1 21h22z',
   info: 'M11 10h2v7h-2zm0-4h2v2h-2zM12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z',

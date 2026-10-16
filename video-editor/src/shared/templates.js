@@ -39,7 +39,7 @@ function insertCard(project, index, card, makeTexts) {
   const res = insertClip(project, index, card, (clips) => dissolveInto(clips, index + 1));
   const added = makeTexts(res.start, res.end);
   return {
-    project: { ...project, clips: res.clips, texts: [...res.texts, ...added], music: res.music },
+    project: { ...project, clips: res.clips, overlays: res.overlays, texts: [...res.texts, ...added], music: res.music },
     select: { type: 'text', id: added[0].id },
     seek: added[0].start + 0.7,
   };

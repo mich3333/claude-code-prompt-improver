@@ -2,7 +2,9 @@
 // export does (fit, color effects, transitions, text) and plays the audio.
 
 import { clipOps, toCssFilter } from '../shared/effects.js';
-import { frameSize, layoutClips, locate, sourceTime, totalDuration } from '../shared/timeline.js';
+import {
+  frameSize, layoutClips, locate, overlayAlpha, overlayDuration, overlayRect, sourceTime, totalDuration,
+} from '../shared/timeline.js';
 import { drawText, measureText, textAlpha } from './text-render.js';
 import { textRiseOffset } from '../shared/ffmpeg.js';
 
@@ -26,6 +28,7 @@ export class Player {
     this.listeners = new Set();
     this.raf = 0;
     this.drawQueued = false;
+    this.pendingRetries = 0;
   }
 
   attach(canvas) {
@@ -63,12 +66,20 @@ export class Player {
     }
   }
 
-  // Create/remove media elements so they match the project's clips.
+  // Overlays visible at time t, shaped like clip segments ({ clip, start, end }).
+  overlaySegs(t) {
+    return (this.project.overlays ?? [])
+      .map((o) => ({ clip: o, start: o.start, end: o.start + overlayDuration(o) }))
+      .filter((s) => t >= s.start && t < s.end);
+  }
+
+  // Create/remove media elements so they match the project's clips and overlays.
   sync() {
     this.resize();
     const ids = new Set();
-    for (const clip of this.project.clips) {
-      if (clip.kind === 'card') continue; // solid colour, nothing to load
+    // Cards are solid colour, nothing to load.
+    const items = [...this.project.clips.filter((c) => c.kind !== 'card'), ...(this.project.overlays ?? [])];
+    for (const clip of items) {
       ids.add(clip.id);
       let entry = this.media.get(clip.id);
       if (entry && entry.url !== clip.url) {
@@ -82,6 +93,7 @@ export class Player {
           el.playsInline = true;
           el.addEventListener('seeked', () => this.requestDraw());
           el.addEventListener('loadeddata', () => this.requestDraw());
+          el.addEventListener('canplay', () => this.requestDraw());
         } else {
           el.addEventListener('load', () => this.requestDraw());
         }
@@ -117,7 +129,7 @@ export class Player {
     this.time = Math.min(Math.max(0, t), this.duration);
     const loc = locate(this.project, this.time);
     if (loc) {
-      for (const seg of [loc.current, loc.next]) {
+      for (const seg of [loc.current, loc.next, ...this.overlaySegs(this.time)]) {
         if (!seg || seg.clip.kind !== 'video') continue;
         const el = this.media.get(seg.clip.id)?.el;
         if (!el) continue;
@@ -178,6 +190,7 @@ export class Player {
       active.set(loc.current.clip.id, { seg: loc.current, gain: loc.next ? 1 - loc.progress : 1 });
       if (loc.next) active.set(loc.next.clip.id, { seg: loc.next, gain: loc.progress });
     }
+    for (const seg of this.overlaySegs(this.time)) active.set(seg.clip.id, { seg, gain: 1 });
     for (const [id, { el }] of this.media) {
       if (!el.play) continue;
       const a = active.get(id);
@@ -266,9 +279,61 @@ export class Player {
     ctx.restore();
   }
 
+  // Split-screen overlay: fill its region (cover/contain), fade the inner edge
+  // to transparent with a gradient mask, then composite onto the frame.
+  drawOverlay(o, alpha) {
+    if (alpha <= 0) return;
+    const W = this.canvas.width;
+    const H = this.canvas.height;
+    const el = this.media.get(o.id)?.el;
+    const sw = el?.videoWidth || el?.naturalWidth;
+    const sh = el?.videoHeight || el?.naturalHeight;
+    const ready = el && (o.kind === 'image' ? el.complete && sw : el.readyState >= 2);
+    if (!ready || !sw || !sh) return;
+    if (!this.off) this.off = document.createElement('canvas');
+    const off = this.off;
+    if (off.width !== W || off.height !== H) {
+      off.width = W;
+      off.height = H;
+    }
+    const octx = off.getContext('2d');
+    const r = overlayRect(o, W, H);
+    octx.clearRect(0, 0, W, H);
+    octx.save();
+    octx.beginPath();
+    octx.rect(r.x, r.y, r.w, r.h);
+    octx.clip();
+    if (o.fit === 'contain') {
+      octx.fillStyle = '#000';
+      octx.fillRect(r.x, r.y, r.w, r.h);
+    }
+    const scale = o.fit === 'contain' ? Math.min(r.w / sw, r.h / sh) : Math.max(r.w / sw, r.h / sh);
+    const dw = sw * scale;
+    const dh = sh * scale;
+    octx.drawImage(el, r.x + (r.w - dw) / 2, r.y + (r.h - dh) / 2, dw, dh);
+    octx.restore();
+    if (r.edge && r.feather > 0) {
+      const g = r.edge === 'bottom'
+        ? octx.createLinearGradient(0, r.y + r.h, 0, r.y + r.h - r.feather)
+        : octx.createLinearGradient(0, r.y, 0, r.y + r.feather);
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(1, 'rgba(0,0,0,1)');
+      octx.save();
+      octx.globalCompositeOperation = 'destination-in';
+      octx.fillStyle = g;
+      octx.fillRect(r.x, r.y, r.w, r.h);
+      octx.restore();
+    }
+    const { ctx } = this;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(off, 0, 0);
+    ctx.restore();
+  }
+
   // A visible video that is still seeking would draw as black; wait for it.
   pending(loc) {
-    return [loc.current, loc.next].some((seg) => {
+    return [loc.current, loc.next, ...this.overlaySegs(this.time)].some((seg) => {
       if (!seg || seg.clip.kind !== 'video') return false;
       const el = this.media.get(seg.clip.id)?.el;
       return el && !el.error && (el.seeking || el.readyState < 2);
@@ -281,7 +346,18 @@ export class Player {
     const W = this.canvas.width;
     const H = this.canvas.height;
     const loc = locate(this.project, this.time);
-    if (loc && this.pending(loc) && !this.canvasResized) return;
+    if (loc && this.pending(loc) && !this.canvasResized) {
+      // 'seeked' usually triggers the redraw, but it can fire before the frame
+      // is decodable, so poll briefly too (then draw whatever is there).
+      if (!this.playing && this.pendingRetries < 40) {
+        this.pendingRetries += 1;
+        clearTimeout(this.retryTimer);
+        this.retryTimer = setTimeout(() => this.requestDraw(), 50);
+        return;
+      }
+      if (this.playing) return;
+    }
+    this.pendingRetries = 0;
     this.canvasResized = false;
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, W, H);
@@ -317,6 +393,11 @@ export class Player {
       ctx.restore();
     }
     const sel = this.store.selection;
+    for (const seg of this.overlaySegs(this.time)) {
+      // While paused, the selected layer is shown fully (as at its first frame it is still faded out).
+      const full = !this.playing && sel?.id === seg.clip.id;
+      this.drawOverlay(seg.clip, full ? 1 : overlayAlpha(seg.clip, this.time));
+    }
     for (const text of this.project.texts) {
       let alpha = textAlpha(text, this.time);
       let dy = textRiseOffset(text, this.time);

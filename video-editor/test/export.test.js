@@ -176,3 +176,42 @@ test('exports template cards with rising text', { timeout: 120000 }, async () =>
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('exports a split screen: feathered overlay on top, main video below', { timeout: 120000 }, async () => {
+  const { createOverlay } = await import('../src/shared/timeline.js');
+  const dir = mkdtempSync(path.join(tmpdir(), 'clipcraft-test-'));
+  try {
+    const p = (n) => path.join(dir, n);
+    // Main video: solid blue with a tone; overlay: solid red with its own tone.
+    ff(['-f', 'lavfi', '-i', 'color=c=blue:s=360x640:r=30:d=4', '-f', 'lavfi', '-i', 'sine=f=300:d=4',
+      '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', p('main.mp4')]);
+    ff(['-f', 'lavfi', '-i', 'color=c=red:s=640x480:r=30:d=4', '-f', 'lavfi', '-i', 'sine=f=900:d=4',
+      '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', p('graphic.mp4')]);
+    const project = createProject();
+    project.aspect = '9:16';
+    project.clips = [createClip(await probe(p('main.mp4')))];
+    project.overlays = [{ ...createOverlay(await probe(p('graphic.mp4')), 1), out: 2, fade: false, muted: false, volume: 0.5 }];
+
+    const { width, height } = frameSize('9:16', 360);
+    const output = p('split.mp4');
+    await exportProject(project, { output, width, height, fps: 30, crf: 20, preset: 'ultrafast' }, { tmpDir: dir });
+    const info = streams(output);
+    assert.ok(Math.abs(Number(info.format.duration) - 4) < 0.15);
+
+    const pixel = (t, y) => {
+      const raw = execFileSync(ffmpegPath(), ['-v', 'error', '-ss', String(t), '-i', output, '-frames:v', '1',
+        '-vf', `crop=2:2:180:${y}`, '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1']);
+      return [...raw.subarray(0, 3)];
+    };
+    const isRed = ([r, g, b]) => r > 200 && g < 60 && b < 60;
+    const isBlue = ([r, g, b]) => b > 200 && r < 60 && g < 60;
+    assert.ok(isBlue(pixel(0.5, 100)), 'before the overlay starts, the top is the main video');
+    assert.ok(isRed(pixel(2, 100)), `top half shows the overlay: ${pixel(2, 100)}`);
+    assert.ok(isBlue(pixel(2, 560)), `bottom half shows the main video: ${pixel(2, 560)}`);
+    const edge = pixel(2, 300); // inside the feathered band
+    assert.ok(edge[0] > 60 && edge[2] > 60, `the edge blends both: ${edge}`);
+    assert.ok(isBlue(pixel(3.5, 100)), 'after it ends, the main video is back');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

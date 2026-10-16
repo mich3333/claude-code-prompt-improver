@@ -1,7 +1,8 @@
 // Editor commands shared by the toolbar, menus, keyboard and panels.
 
 import {
-  createClip, createMusic, createProject, createText, layoutClips, newId, splitClipAt, totalDuration,
+  createClip, createMusic, createOverlay, createProject, createText, layoutClips, newId, overlayDuration, splitClipAt,
+  totalDuration,
 } from '../shared/timeline.js';
 import { applyTemplate, TEMPLATES } from '../shared/templates.js';
 import { isTyping, player, store, timelineApi, ui } from './state.js';
@@ -49,6 +50,21 @@ export function addMediaToTimeline(media, index = store.project.clips.length) {
   store.select({ type: 'clip', id: clip.id });
 }
 
+// Adds a video/photo as a layer above the main video (split screen). It starts
+// at the playhead, or at 0 when the playhead is at the very end.
+export function addOverlay(media, start = null) {
+  if (media.kind === 'audio') return;
+  const total = totalDuration(store.project);
+  const at = start ?? (player.time < total - 0.2 ? player.time : 0);
+  const overlay = createOverlay(media, at);
+  store.update((p) => {
+    p.overlays ??= [];
+    p.overlays.push(overlay);
+  });
+  store.select({ type: 'overlay', id: overlay.id });
+  player.seek(Math.max(at, Math.min(player.time, at + overlayDuration(overlay) - 0.05)));
+}
+
 export const actions = {
   applyTemplate(id) {
     player.pause();
@@ -57,6 +73,7 @@ export const actions = {
     store.update((p) => {
       p.clips = project.clips;
       p.texts = project.texts;
+      p.overlays = project.overlays ?? [];
       p.music = project.music;
     });
     if (select) store.select(select);
@@ -116,6 +133,13 @@ export const actions = {
         if (i >= 0) p.clips.splice(i + 1, 0, { ...structuredClone(p.clips[i]), id });
       });
       store.select({ type: 'clip', id });
+    } else if (sel?.type === 'overlay') {
+      const id = newId('ovl');
+      store.update((p) => {
+        const o = p.overlays.find((x) => x.id === sel.id);
+        if (o) p.overlays.push({ ...structuredClone(o), id, start: o.start + overlayDuration(o) });
+      });
+      store.select({ type: 'overlay', id });
     } else if (sel?.type === 'text') {
       const id = newId('text');
       store.update((p) => {
@@ -131,6 +155,7 @@ export const actions = {
     if (!sel) return;
     store.update((p) => {
       if (sel.type === 'clip') p.clips = p.clips.filter((c) => c.id !== sel.id);
+      if (sel.type === 'overlay') p.overlays = p.overlays.filter((o) => o.id !== sel.id);
       if (sel.type === 'text') p.texts = p.texts.filter((t) => t.id !== sel.id);
       if (sel.type === 'music') p.music = null;
     });
