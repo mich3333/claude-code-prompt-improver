@@ -13,6 +13,7 @@ import { NEWS_SCRIPT, NewsCast, type NewsProps } from './NewsCast';
 import { Versus, versusDuration, type VersusProps } from './Versus';
 import { MATCHES } from './versus';
 import { SKILL_SCRIPT, SkillExplainer, type SkillProps } from './SkillExplainer';
+import { VoiceSplit, type VoiceSplitProps } from './VoiceSplit';
 
 const defaults: WeeklyProps = {
   avatar: null,
@@ -110,6 +111,25 @@ export const RemotionRoot: React.FC = () => (
         const end = props.words?.length ? props.words[props.words.length - 1].end : 10;
         return { durationInFrames: Math.ceil((end + 1.5) * FPS) };
       }}
+    />
+    {/* A selfie that splits in two when the trigger word is spoken. The defaults are a stand-in until the real face.mp4 and its transcript arrive. */}
+    <Composition
+      id="VoiceSplit"
+      component={VoiceSplit}
+      durationInFrames={300}
+      fps={FPS}
+      width={W}
+      height={H}
+      defaultProps={
+        {
+          face: 'demos/ai-news.mp4',
+          second: 'demos/openai-vs-anthropic.mp4',
+          words: estimateWords(['היי, רוצים לראות משהו?', 'Claude, תפצל את המסך לשניים.', 'הנה, עכשיו רואים את שניהם.'], { start: 0.4, pause: 0.4 }),
+          trigger: 'לשניים',
+          durationSec: 9,
+        } as VoiceSplitProps
+      }
+      calculateMetadata={({ props }: { props: VoiceSplitProps }) => ({ durationInFrames: Math.ceil(props.durationSec * FPS) })}
     />
   </>
 );
