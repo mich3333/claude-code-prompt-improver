@@ -72,6 +72,7 @@ export function groupWords(words, { maxWords = 3, maxChars = 18, maxGap = 0.5 } 
 export const CAPTION_LOOKS = {
   classic: { label: 'לבן', look: { size: 0.085, color: '#ffffff', font: 'rubik', bold: true, style: 'outline' } },
   red: { label: 'אדום (כמו ברפרנס)', look: { size: 0.062, color: '#ef4444', font: 'rubik', bold: true, style: 'shadow' } },
+  headline: { label: 'כותרת לבנה גדולה', look: { size: 0.078, color: '#ffffff', font: 'rubik', bold: true, style: 'shadow' } },
 };
 
 // Caption texts in the editor's text format, marked so they can be replaced.

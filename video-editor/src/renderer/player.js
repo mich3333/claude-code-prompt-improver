@@ -298,19 +298,29 @@ export class Player {
     }
     const octx = off.getContext('2d');
     const r = overlayRect(o, W, H);
+    const custom = o.region === 'custom';
+    // Free layers draw into their inner box (inside a card's white margin).
+    const a = custom ? { x: r.x + r.inner.x, y: r.y + r.inner.y, w: r.inner.w, h: r.inner.h } : r;
     octx.clearRect(0, 0, W, H);
     octx.save();
     octx.beginPath();
-    octx.rect(r.x, r.y, r.w, r.h);
+    if (custom && r.radius > 0 && (r.card || o.fit !== 'contain')) octx.roundRect(r.x, r.y, r.w, r.h, r.radius);
+    else octx.rect(r.x, r.y, r.w, r.h);
     octx.clip();
-    if (o.fit === 'contain') {
+    if (custom && r.card) {
+      octx.fillStyle = '#fff';
+      octx.fillRect(r.x, r.y, r.w, r.h);
+    } else if (!custom && o.fit === 'contain') {
       octx.fillStyle = '#000';
       octx.fillRect(r.x, r.y, r.w, r.h);
     }
-    const scale = o.fit === 'contain' ? Math.min(r.w / sw, r.h / sh) : Math.max(r.w / sw, r.h / sh);
+    octx.beginPath();
+    octx.rect(a.x, a.y, a.w, a.h);
+    octx.clip();
+    const scale = o.fit === 'contain' ? Math.min(a.w / sw, a.h / sh) : Math.max(a.w / sw, a.h / sh);
     const dw = sw * scale;
     const dh = sh * scale;
-    octx.drawImage(el, r.x + (r.w - dw) / 2, r.y + (r.h - dh) / 2, dw, dh);
+    octx.drawImage(el, a.x + (a.w - dw) / 2, a.y + (a.h - dh) / 2, dw, dh);
     octx.restore();
     if (r.edge && r.feather > 0) {
       const g = r.edge === 'bottom'

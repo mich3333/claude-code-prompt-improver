@@ -2,7 +2,7 @@
 // short video (encoded by the main process), placed as a split-screen layer.
 
 import {
-  easeOutCubic, formatCountUp, GOLD, GRAPHIC_ANIMATION, GRAPHIC_FPS, graphicDuration, graphicSize, parseBars,
+  easeOutCubic, formatCountUp, GOLD, GRAPHIC_ANIMATION, GRAPHIC_FPS, GRAPHIC_TYPES, graphicDuration, graphicSize, parseBars,
   parseCountUp, yearRange,
 } from '../shared/graphics.js';
 import { textDirection } from '../shared/timeline.js';
@@ -311,12 +311,41 @@ function drawQuote(ctx, W, H, t, g) {
   at(right, cardY + cardH + 74 * s, g.url, { weight: 500, px: 30 * s, color: GOLD.muted, dir: 'ltr', alpha: fade(t, 1.25) });
 }
 
+// Navy background with flowing lines; periodic in t so it loops seamlessly.
+function drawWaves(ctx, W, H, t, g, period) {
+  const bg = ctx.createLinearGradient(0, 0, W * 0.3, H);
+  bg.addColorStop(0, '#0f1d3d');
+  bg.addColorStop(1, '#060c1d');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+  const phase = (2 * Math.PI * t) / period;
+  const lines = 34;
+  const s = Math.min(W / 1080, H / 1920);
+  ctx.lineWidth = 2 * s;
+  for (let i = 0; i < lines; i++) {
+    const y0 = -0.15 * H + (i / lines) * H * 1.3;
+    const amp = H * (0.035 + 0.02 * Math.sin(i * 1.7));
+    ctx.strokeStyle = `rgba(140, 170, 230, ${0.1 + 0.12 * ((i * 7) % 5) / 4})`;
+    ctx.beginPath();
+    for (let k = 0; k <= 48; k++) {
+      const x = (k / 48) * W;
+      const y = y0 + amp * Math.sin((x / W) * 2 * Math.PI * 0.9 + i * 0.35 + phase) + (x / W) * H * 0.12;
+      if (k === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+}
+
 const DRAW = { number: drawNumber, bars: drawBars, year: drawYear, quote: drawQuote };
 
 export function drawGraphic(ctx, W, H, t, g) {
   ctx.save();
-  background(ctx, W, H, t);
-  DRAW[g.type]?.(ctx, W, H, t, g);
+  if (g.type === 'waves') drawWaves(ctx, W, H, t, g, GRAPHIC_TYPES.waves.loop);
+  else {
+    background(ctx, W, H, t);
+    DRAW[g.type]?.(ctx, W, H, t, g);
+  }
   ctx.restore();
 }
 
@@ -339,7 +368,8 @@ export async function renderGraphicVideo(g, aspect) {
   canvas.height = height;
   const ctx = canvas.getContext('2d');
   const frames = [];
-  const count = Math.round(GRAPHIC_ANIMATION * GRAPHIC_FPS);
+  const loop = GRAPHIC_TYPES[g.type]?.loop;
+  const count = Math.round((loop ?? GRAPHIC_ANIMATION) * GRAPHIC_FPS);
   for (let i = 0; i < count; i++) {
     drawGraphic(ctx, width, height, i / GRAPHIC_FPS, g);
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
@@ -347,5 +377,6 @@ export async function renderGraphicVideo(g, aspect) {
   }
   return window.api.encodeGraphic({
     frames, fps: GRAPHIC_FPS, hold: graphicDuration(g) - GRAPHIC_ANIMATION, name: g.type,
+    ...(loop ? { loop: true, duration: graphicDuration(g) } : {}),
   });
 }

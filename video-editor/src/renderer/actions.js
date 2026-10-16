@@ -85,7 +85,9 @@ export async function addGraphic(type) {
     store.update((p) => {
       p.media.push({ ...item, id: newId('media'), name: GRAPHIC_TYPES[type].name });
       p.overlays ??= [];
-      p.overlays.push(overlay);
+      // A background goes under every other layer.
+      if (GRAPHIC_TYPES[type].background) p.overlays.unshift(overlay);
+      else p.overlays.push(overlay);
     });
     store.select({ type: 'overlay', id: overlay.id });
     player.seek(Math.min(at + 2, at + overlayDuration(overlay) - 0.05));

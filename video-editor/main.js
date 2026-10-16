@@ -291,7 +291,7 @@ async function currentKey() {
 }
 
 // ---- generated graphics: renderer frames -> video in the app's data folder ----
-ipcMain.handle('graphics:encode', async (_e, { frames, fps, hold, name }) => {
+ipcMain.handle('graphics:encode', async (_e, { frames, fps, hold, name, loop, duration }) => {
   const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'clipcraft-graphic-'));
   try {
     for (const [i, frame] of frames.entries()) {
@@ -301,7 +301,7 @@ ipcMain.handle('graphics:encode', async (_e, { frames, fps, hold, name }) => {
     await mkdir(dir, { recursive: true });
     const safe = String(name).replace(/[^a-z0-9-]/gi, '') || 'graphic';
     const output = path.join(dir, `${safe}-${Date.now()}.mp4`);
-    await encodeFrames(tmpDir, { fps, hold }, output);
+    await encodeFrames(tmpDir, { fps, hold, loop: Boolean(loop), duration: Number(duration) || 0 }, output);
     const item = await probe(output);
     allowMedia([output]);
     return item;

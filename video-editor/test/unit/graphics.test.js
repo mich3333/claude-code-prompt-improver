@@ -50,3 +50,9 @@ test('graphic duration defaults to 4s and is clamped to the animation and a minu
   assert.equal(graphicDuration({ duration: 600 }), 60);
   assert.equal(graphicDuration({}), 4);
 });
+
+test('the wave background fills the frame and loops for its whole duration', () => {
+  assert.deepEqual(graphicSize('9:16', 'waves'), { width: 1080, height: 1920 });
+  assert.equal(GRAPHIC_TYPES.waves.loop > 0, true);
+  assert.equal(createGraphic('waves').duration, 15);
+});

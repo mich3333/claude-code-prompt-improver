@@ -2,7 +2,8 @@
 
 import { PRESETS } from '../../shared/effects.js';
 import {
-  ASPECTS, clipDuration, effectiveTransition, formatTime, layoutClips, MIN_CLIP_DURATION, OVERLAY_REGIONS,
+  ASPECTS, clipDuration, createText, effectiveTransition, formatTime, layoutClips, MIN_CLIP_DURATION, OVERLAY_PRESETS,
+  OVERLAY_REGIONS, OVERLAY_STYLES,
   overlayDuration, sourceTime, SPEEDS, totalDuration, TRANSITIONS,
 } from '../../shared/timeline.js';
 import { useState } from 'react';
@@ -168,7 +169,7 @@ function GraphicContent({ overlay }) {
   const changed = JSON.stringify(draft) !== JSON.stringify(overlay.graphic);
   return (
     <Section title={`תוכן: ${GRAPHIC_TYPES[g.type]?.name ?? 'גרפיקה'}`}>
-      {field('כותרת', 'label', { id: 'graphic-label' })}
+      {g.type !== 'waves' && field('כותרת', 'label', { id: 'graphic-label' })}
       {field('משך (שניות)', 'duration', { id: 'graphic-duration', type: 'number', min: 2, max: 60, step: 0.5, dir: 'ltr' })}
       {g.type === 'quote' && (
         <>
@@ -218,7 +219,23 @@ function GraphicContent({ overlay }) {
 
 function OverlayPanel({ overlay }) {
   const isImage = overlay.kind === 'image';
-  const split = overlay.region !== 'full';
+  const split = overlay.region === 'top' || overlay.region === 'bottom';
+  const custom = overlay.region === 'custom';
+  const box = overlay.box ?? { x: 0.1, y: 0.1, w: 0.8, h: 0.45 };
+  const boxField = (label, k, min = 0) => (
+    <RangeField label={label} value={Math.round((box[k] ?? 0) * 100)} min={min} max={100} format={pct}
+      onChange={(v) => edit((o) => { o.box = { ...(o.box ?? box), [k]: v / 100 }; })} onCommit={commit} />
+  );
+  // A small dark "source" pill (e.g. @handle) sitting on the card's bottom corner.
+  const addBadge = () => {
+    const t = {
+      ...createText(overlay.start, overlay.start + (overlay.out - overlay.in)),
+      text: '@מקור', x: Math.min(0.92, box.x + box.w * 0.74), y: Math.min(0.97, box.y + box.h - 0.035),
+      size: 0.032, color: '#ffffff', font: 'rubik', bold: true, style: 'box', boxColor: '#2b2f36', boxOpacity: 0.92, animation: 'fade',
+    };
+    store.update((p) => p.texts.push(t));
+    store.select({ type: 'text', id: t.id });
+  };
   const info = isImage
     ? 'תמונה בשכבה העליונה'
     : `וידאו בשכבה העליונה · ${formatTime(overlay.sourceDuration, true)}`;
@@ -234,6 +251,28 @@ function OverlayPanel({ overlay }) {
       <Section title="מסך מפוצל">
         <Segmented value={overlay.region} options={OVERLAY_REGIONS}
           onChange={(v) => apply((o) => { o.region = v; })} />
+        {custom && (
+          <>
+            <div className="btn-row">
+              {Object.entries(OVERLAY_PRESETS).map(([id, pr]) => (
+                <Button key={id} data-preset={id} onClick={() => apply((o) => {
+                  Object.assign(o, { box: { ...pr.box }, style: pr.style, radius: pr.radius, fit: pr.fit });
+                })}>{pr.name}</Button>
+              ))}
+            </div>
+            {boxField('מיקום אופקי', 'x')}
+            {boxField('מיקום אנכי', 'y')}
+            {boxField('רוחב', 'w', 5)}
+            {boxField('גובה', 'h', 5)}
+            <Segmented value={overlay.style ?? 'plain'} options={OVERLAY_STYLES}
+              onChange={(v) => apply((o) => { o.style = v; })} />
+            <RangeField label="פינות מעוגלות" value={Math.round((overlay.radius ?? 0) * 1000) / 10} min={0} max={10} step={0.5} format={pct}
+              onChange={(v) => edit((o) => { o.radius = v / 100; })} onCommit={commit} />
+            {overlay.style === 'card' && (
+              <div className="btn-row"><Button id="overlay-badge" onClick={addBadge}>הוספת תגית מקור</Button></div>
+            )}
+          </>
+        )}
         {split && (
           <>
             <RangeField label="גובה" value={Math.round(overlay.split * 100)} min={30} max={70} format={pct}
@@ -245,9 +284,9 @@ function OverlayPanel({ overlay }) {
         <Segmented value={overlay.fit} options={{ cover: 'מילוי (חיתוך)', contain: 'התאמה (פסים)' }}
           onChange={(v) => apply((o) => { o.fit = v; })} />
         <div className="insp-note">
-          {split
-            ? 'הווידאו הראשי ממשיך מתחת. כדאי שהפנים בו יהיו בחצי השני של המסגרת.'
-            : 'השכבה מכסה את כל המסגרת בזמן שהיא מוצגת.'}
+          {split && 'הווידאו הראשי ממשיך מתחת. כדאי שהפנים בו יהיו בחצי השני של המסגרת.'}
+          {overlay.region === 'full' && 'השכבה מכסה את כל המסגרת בזמן שהיא מוצגת.'}
+          {custom && 'שכבה חופשית: מקום וגודל באחוזים מהמסגרת. ל-PNG שקוף (אווטאר) בחרו "התאמה".'}
         </div>
       </Section>
 

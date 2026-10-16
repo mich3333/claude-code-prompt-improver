@@ -98,6 +98,17 @@ The **תבניות** (Templates) tab opens with a black-and-gold set for vertica
 
 Each graphic is drawn by the editor and saved as a short video in the app's data folder, then placed at the playhead as a split-screen layer. Select it to edit the title, the number or the bars, and click **עדכון הגרפיקה** (update); its timing and placement stay as they are.
 
+## Avatar explainer style
+
+For the "cartoon presenter points at a content card" format:
+
+- **רקע גלים** (wave background) in the templates tab: a navy background with flowing lines that loops seamlessly for the graphic's duration and sits under every other layer.
+- **Free layers (חופשי):** any layer can be placed anywhere, with position, width and height in percent of the frame, rounded corners, and a **כרטיס לבן** (white card) style that frames the picture with a white margin. Two presets: **כרטיס תוכן למעלה** (a content card at the top) and **אווטאר בפינה** (an avatar in the bottom corner). Choose "התאמה" (contain) for a transparent PNG, so its transparency is kept.
+- **הוספת תגית מקור** adds a small dark "@source" pill on the card's corner (a normal text item you can edit).
+- Captions have a **כותרת לבנה גדולה** look: large white text in the middle, as in these videos.
+
+Make the cartoon avatar once from your photo with an image AI (it needs a transparent background), in a few poses (pointing, holding a laptop, surprised), and swap poses between scenes.
+
 ## Get the app
 
 Ready-made installers are built by GitHub Actions on every push and published as the **ClipCraft (latest build)** pre-release under the repository's Releases:
