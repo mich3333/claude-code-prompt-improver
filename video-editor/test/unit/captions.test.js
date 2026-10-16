@@ -30,7 +30,7 @@ test('word times map onto the timeline through clip position and speed', () => {
   const source = { start: 10, end: 12, speed: 2 };
   const words = toTimelineWords(source, [
     w('שלום', 0.2, 0.6), { text: ' ', start: 0.6, end: 0.7, type: 'spacing' }, { text: '(צחוק)', start: 1, end: 1.5, type: 'audio_event' },
-    w('לכולם', 1, 1.4), w('אחרי-הסוף', 3.95, 4.5),
+    w('לכולם', 1, 1.4), w('[excited]', 1.5, 1.55), w('(צוחק)', 1.6, 1.7), w('אחרי-הסוף', 3.95, 4.5),
   ]);
   assert.deepEqual(words, [
     { text: 'שלום', start: 10.1, end: 10.3 },

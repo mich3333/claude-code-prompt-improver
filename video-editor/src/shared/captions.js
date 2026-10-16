@@ -27,7 +27,8 @@ export function toTimelineWords(source, words) {
   for (const w of words ?? []) {
     if ((w.type ?? 'word') !== 'word') continue;
     const text = String(w.text ?? '').trim();
-    if (!text || !(w.end >= w.start)) continue;
+    // Sound and delivery tags ("[excited]", "(laughs)") can come back typed as words.
+    if (!text || /^[[(].*[\])]$/u.test(text) || !(w.end >= w.start)) continue;
     const start = source.start + w.start / source.speed;
     if (start >= source.end - 0.05) continue;
     out.push({ text, start, end: Math.min(source.end, source.start + w.end / source.speed) });
