@@ -20,8 +20,8 @@ export type AgentsProps = {
 };
 
 const clamp = { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' } as const;
-const PHONE = { w: 520, h: 1060, top: 300 };
-const FACE = { x: 40, y: 1450, w: 1000, h: 420 };
+const PHONE = { w: 660, h: 1110, top: 270 };
+const FACE = { x: 40, y: 1490, w: 1000, h: 390 };
 
 type Seg = { from: number; to: number; i: number };
 const segments = (words: Word[], fps: number, total: number): Seg[] => {
@@ -45,8 +45,8 @@ const Kicker: React.FC<{ text: string; title: string; f: number }> = ({ text, ti
   const s = pop(f, 0, fps);
   return (
     <div style={{ padding: '18px 30px 10px', opacity: s, transform: `translateY(${(1 - s) * 20}px)` }}>
-      <div style={{ fontSize: 24, fontWeight: 700, color: COLORS.gold, letterSpacing: 1 }}>{text}</div>
-      <div style={{ fontSize: 44, fontWeight: 800, color: COLORS.ink, lineHeight: 1.12, marginTop: 6 }}>{title}</div>
+      <div style={{ fontSize: 30, fontWeight: 700, color: COLORS.gold, letterSpacing: 1 }}>{text}</div>
+      <div style={{ fontSize: 55, fontWeight: 800, color: COLORS.ink, lineHeight: 1.12, marginTop: 6 }}>{title}</div>
     </div>
   );
 };
@@ -57,8 +57,8 @@ const Row: React.FC<{ f: number; k: number; children: React.ReactNode }> = ({ f,
   return (
     <div
       style={{
-        margin: '0 22px 14px',
-        padding: '16px 20px',
+        margin: '0 24px 18px',
+        padding: '20px 24px',
         borderRadius: 22,
         background: COLORS.card,
         border: `2px solid ${COLORS.cardBorder}`,
@@ -78,9 +78,9 @@ const ScreenView: React.FC<{ screen: Screen; f: number }> = ({ screen, f }) => {
       const s = pop(f, 4, fps);
       return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 36px', gap: 18 }}>
-          <div style={{ fontSize: 28, fontWeight: 700, color: COLORS.gold, opacity: s }}>{screen.kicker}</div>
-          <div style={{ fontSize: 66, fontWeight: 800, color: COLORS.ink, lineHeight: 1.08, transform: `scale(${0.85 + s * 0.15})`, transformOrigin: '100% 50%', opacity: s }}>{screen.title}</div>
-          {screen.sub && <div style={{ fontSize: 30, color: COLORS.muted, lineHeight: 1.3, opacity: interpolate(f, [16, 26], [0, 1], clamp) }}>{screen.sub}</div>}
+          <div style={{ fontSize: 35, fontWeight: 700, color: COLORS.gold, opacity: s }}>{screen.kicker}</div>
+          <div style={{ fontSize: 82, fontWeight: 800, color: COLORS.ink, lineHeight: 1.08, transform: `scale(${0.85 + s * 0.15})`, transformOrigin: '100% 50%', opacity: s }}>{screen.title}</div>
+          {screen.sub && <div style={{ fontSize: 38, color: COLORS.muted, lineHeight: 1.3, opacity: interpolate(f, [16, 26], [0, 1], clamp) }}>{screen.sub}</div>}
         </div>
       );
     }
@@ -91,10 +91,10 @@ const ScreenView: React.FC<{ screen: Screen; f: number }> = ({ screen, f }) => {
           {screen.items.map((it, k) => (
             <Row key={k} f={f} k={k}>
               <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-                <div style={{ width: 44, height: 44, borderRadius: 22, border: `2px solid ${COLORS.gold}`, color: COLORS.gold, fontSize: 24, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{k + 1}</div>
+                <div style={{ width: 54, height: 54, borderRadius: 27, border: `2px solid ${COLORS.gold}`, color: COLORS.gold, fontSize: 30, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{k + 1}</div>
                 <div>
-                  <div style={{ fontSize: 31, fontWeight: 700, color: COLORS.ink, lineHeight: 1.2 }}>{it.text}</div>
-                  {it.note && <div style={{ fontSize: 23, color: COLORS.muted, marginTop: 4, lineHeight: 1.25 }}>{it.note}</div>}
+                  <div style={{ fontSize: 39, fontWeight: 700, color: COLORS.ink, lineHeight: 1.2 }}>{it.text}</div>
+                  {it.note && <div style={{ fontSize: 29, color: COLORS.muted, marginTop: 4, lineHeight: 1.25 }}>{it.note}</div>}
                 </div>
               </div>
             </Row>
@@ -108,10 +108,10 @@ const ScreenView: React.FC<{ screen: Screen; f: number }> = ({ screen, f }) => {
           {screen.items.map((it, k) => (
             <Row key={k} f={f} k={k}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
-                <div style={{ fontSize: 32, fontWeight: 800, color: COLORS.ink, direction: 'ltr' }}>{it.name}</div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: COLORS.gold, direction: 'ltr', whiteSpace: 'nowrap' }}>{it.price}</div>
+                <div style={{ fontSize: 40, fontWeight: 800, color: COLORS.ink, direction: 'ltr' }}>{it.name}</div>
+                <div style={{ fontSize: 30, fontWeight: 700, color: COLORS.gold, direction: 'ltr', whiteSpace: 'nowrap' }}>{it.price}</div>
               </div>
-              <div style={{ fontSize: 24, color: COLORS.muted, marginTop: 4, lineHeight: 1.25 }}>{it.what}</div>
+              <div style={{ fontSize: 30, color: COLORS.muted, marginTop: 4, lineHeight: 1.25 }}>{it.what}</div>
             </Row>
           ))}
         </>
@@ -121,23 +121,23 @@ const ScreenView: React.FC<{ screen: Screen; f: number }> = ({ screen, f }) => {
         <>
           <Kicker text={screen.kicker} title={screen.title} f={f} />
           <div style={{ display: 'flex', margin: '6px 22px 10px', gap: 10, direction: 'rtl' }}>
-            <div style={{ width: 120 }} />
+            <div style={{ width: 150 }} />
             {[screen.a, screen.b].map((n) => (
-              <div key={n} style={{ flex: 1, textAlign: 'center', fontSize: 28, fontWeight: 800, color: COLORS.ink, padding: '10px 0', borderRadius: 16, border: `2px solid ${COLORS.cardBorder}`, direction: 'ltr' }}>{n}</div>
+              <div key={n} style={{ flex: 1, textAlign: 'center', fontSize: 35, fontWeight: 800, color: COLORS.ink, padding: '10px 0', borderRadius: 16, border: `2px solid ${COLORS.cardBorder}`, direction: 'ltr' }}>{n}</div>
             ))}
           </div>
           {screen.rows.map((r, k) => {
             const s = pop(f, 10 + k * 7, fps);
             return (
               <div key={k} style={{ display: 'flex', margin: '0 22px 10px', gap: 10, alignItems: 'stretch', opacity: s, transform: `translateY(${(1 - s) * 20}px)`, direction: 'rtl' }}>
-                <div style={{ width: 120, fontSize: 23, fontWeight: 700, color: COLORS.gold, display: 'flex', alignItems: 'center' }}>{r.label}</div>
+                <div style={{ width: 150, fontSize: 29, fontWeight: 700, color: COLORS.gold, display: 'flex', alignItems: 'center' }}>{r.label}</div>
                 {[r.a, r.b].map((v, j) => (
-                  <div key={j} style={{ flex: 1, padding: '12px 10px', borderRadius: 16, background: COLORS.card, fontSize: 22, fontWeight: 600, color: COLORS.ink, textAlign: 'center', lineHeight: 1.25 }}>{v}</div>
+                  <div key={j} style={{ flex: 1, padding: '12px 10px', borderRadius: 16, background: COLORS.card, fontSize: 28, fontWeight: 600, color: COLORS.ink, textAlign: 'center', lineHeight: 1.25 }}>{v}</div>
                 ))}
               </div>
             );
           })}
-          {screen.source && <div style={{ margin: '8px 26px', fontSize: 18, color: COLORS.muted }}>{screen.source}</div>}
+          {screen.source && <div style={{ margin: '8px 26px', fontSize: 22, color: COLORS.muted }}>{screen.source}</div>}
         </>
       );
     case 'match':
@@ -146,8 +146,8 @@ const ScreenView: React.FC<{ screen: Screen; f: number }> = ({ screen, f }) => {
           <Kicker text={screen.kicker} title={screen.title} f={f} />
           {screen.items.map((it, k) => (
             <Row key={k} f={f} k={k}>
-              <div style={{ fontSize: 26, color: COLORS.muted, lineHeight: 1.2 }}>{it.when}</div>
-              <div style={{ fontSize: 31, fontWeight: 800, color: COLORS.ink, marginTop: 6, lineHeight: 1.2 }}>← {it.use}</div>
+              <div style={{ fontSize: 32, color: COLORS.muted, lineHeight: 1.2 }}>{it.when}</div>
+              <div style={{ fontSize: 39, fontWeight: 800, color: COLORS.ink, marginTop: 6, lineHeight: 1.2 }}>← {it.use}</div>
             </Row>
           ))}
         </>
@@ -156,8 +156,8 @@ const ScreenView: React.FC<{ screen: Screen; f: number }> = ({ screen, f }) => {
       const s = pop(f, 10, fps);
       return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 30, padding: '0 34px', textAlign: 'center' }}>
-          <div style={{ fontSize: 56, fontWeight: 800, color: COLORS.ink, lineHeight: 1.12 }}>{screen.title}</div>
-          <div style={{ padding: '18px 36px', borderRadius: 40, border: `3px solid ${COLORS.gold}`, color: COLORS.gold, fontSize: 36, fontWeight: 800, transform: `scale(${s})` }}>{screen.button}</div>
+          <div style={{ fontSize: 70, fontWeight: 800, color: COLORS.ink, lineHeight: 1.12 }}>{screen.title}</div>
+          <div style={{ padding: '18px 36px', borderRadius: 40, border: `3px solid ${COLORS.gold}`, color: COLORS.gold, fontSize: 45, fontWeight: 800, transform: `scale(${s})` }}>{screen.button}</div>
         </div>
       );
     }
@@ -173,7 +173,7 @@ const BigWord: React.FC<{ words: Word[] }> = ({ words }) => {
   const w = words[i];
   const s = spring({ frame: frame - Math.round(w.start * fps), fps, config: { damping: 12, stiffness: 260, mass: 0.5 } });
   return (
-    <div style={{ position: 'absolute', top: 1365, left: 0, right: 0, height: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', direction: 'rtl', zIndex: 6 }}>
+    <div style={{ position: 'absolute', top: 1392, left: 0, right: 0, height: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', direction: 'rtl', zIndex: 6 }}>
       <span style={{ fontSize: 76, fontWeight: 800, color: /[A-Za-z]/.test(w.text) ? COLORS.goldLight : COLORS.white, transform: `scale(${0.7 + s * 0.3})`, textShadow: '0 6px 24px rgba(0,0,0,0.85)', unicodeBidi: 'isolate' }}>
         {w.text.replace(/[.,!?:;]+$/, '')}
       </span>
@@ -226,14 +226,14 @@ export const AgentsGuide: React.FC<AgentsProps> = ({ voice, words, face }) => {
           WebkitMaskImage: 'radial-gradient(ellipse at 50% 40%, black 30%, transparent 80%)',
         }}
       />
-      <div style={{ position: 'absolute', top: 110, left: 40, right: 40, textAlign: 'center', fontSize: 64, fontWeight: 800, color: COLORS.white, lineHeight: 1.1 }}>
+      <div style={{ position: 'absolute', top: 96, left: 40, right: 40, textAlign: 'center', fontSize: 62, fontWeight: 800, color: COLORS.white, lineHeight: 1.1 }}>
         סוכני AI שבאמת
         <br />
         <span style={{ color: COLORS.goldLight }}>מכניסים כסף</span>
       </div>
       <div style={{ position: 'absolute', top: PHONE.top, left: (W - PHONE.w) / 2 }}>
         <Phone w={PHONE.w} h={PHONE.h}>
-          <div key={seg?.i} style={{ height: '100%', opacity: swap, transform: `translateY(${(1 - swap) * 30}px)` }}>
+          <div key={seg?.i} style={{ height: '100%', paddingBottom: 60, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'center', opacity: swap, transform: `translateY(${(1 - swap) * 30}px)` }}>
             <ScreenView screen={screen} f={f} />
           </div>
         </Phone>

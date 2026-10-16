@@ -14,6 +14,8 @@ import { Versus, versusDuration, type VersusProps } from './Versus';
 import { MATCHES } from './versus';
 import { SKILL_SCRIPT, SkillExplainer, type SkillProps } from './SkillExplainer';
 import { VoiceSplit, type VoiceSplitProps } from './VoiceSplit';
+import { AgentsGuide, type AgentsProps } from './AgentsGuide';
+import { AGENTS_SCRIPT } from './agents';
 
 const defaults: WeeklyProps = {
   avatar: null,
@@ -136,6 +138,20 @@ export const RemotionRoot: React.FC = () => (
         } as VoiceSplitProps
       }
       calculateMetadata={({ props }: { props: VoiceSplitProps }) => ({ durationInFrames: Math.ceil(props.durationSec * FPS) })}
+    />
+    {/* Which AI agents make money: phone screens per sentence above the presenter. Pass "face"/"voice" and "words" once recorded. */}
+    <Composition
+      id="AgentsGuide"
+      component={AgentsGuide}
+      durationInFrames={300}
+      fps={FPS}
+      width={W}
+      height={H}
+      defaultProps={{ voice: null, words: estimateWords(AGENTS_SCRIPT.map((l) => l.text), { start: 0.5, pause: 0.7 }), face: null } as AgentsProps}
+      calculateMetadata={({ props }: { props: AgentsProps }) => {
+        const end = props.words?.length ? props.words[props.words.length - 1].end : 10;
+        return { durationInFrames: Math.ceil((end + 1.5) * FPS) };
+      }}
     />
   </>
 );
