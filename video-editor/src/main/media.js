@@ -115,11 +115,16 @@ export async function extractAudio(source, output, { signal } = {}) {
 
 // Numbered JPEG frames (frame_0000.jpg, ...) -> H.264 video that holds the
 // last frame for `hold` more seconds (used for the generated graphics).
-export async function encodeFrames(dir, { fps, hold }, output) {
+// With loop, the frames are one seamless cycle repeated for `duration` seconds.
+export async function encodeFrames(dir, { fps, hold, loop = false, duration }, output) {
+  const input = ['-framerate', String(fps), '-i', path.join(dir, 'frame_%04d.jpg')];
+  const timing = loop
+    ? { input: ['-stream_loop', '-1', ...input], vf: 'format=yuv420p', extra: ['-t', String(duration)] }
+    : { input, vf: `tpad=stop_mode=clone:stop_duration=${Math.max(0, hold)},format=yuv420p`, extra: [] };
   await run(ffmpegPath(), [
     '-hide_banner', '-v', 'error', '-y',
-    '-framerate', String(fps), '-i', path.join(dir, 'frame_%04d.jpg'),
-    '-vf', `tpad=stop_mode=clone:stop_duration=${Math.max(0, hold)},format=yuv420p`,
+    ...timing.input,
+    '-vf', timing.vf, ...timing.extra,
     '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '17', '-movflags', '+faststart', output,
   ]);
   return output;

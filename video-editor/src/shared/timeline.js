@@ -142,7 +142,14 @@ export function createMusic(media) {
 // in the top or bottom part of the frame (a split screen) or full frame.
 // The edge facing the other half fades out, so the two halves blend.
 
-export const OVERLAY_REGIONS = { top: 'למעלה', bottom: 'למטה', full: 'מסך מלא' };
+export const OVERLAY_REGIONS = { top: 'למעלה', bottom: 'למטה', full: 'מסך מלא', custom: 'חופשי' };
+export const OVERLAY_STYLES = { plain: 'רגיל', card: 'כרטיס לבן' };
+
+// One-click layouts for a free ("custom") layer, as fractions of the frame.
+export const OVERLAY_PRESETS = {
+  card: { name: 'כרטיס תוכן למעלה', box: { x: 0.04, y: 0.03, w: 0.92, h: 0.38 }, style: 'card', radius: 0.035, fit: 'contain' },
+  avatar: { name: 'אווטאר בפינה', box: { x: 0.42, y: 0.56, w: 0.58, h: 0.44 }, style: 'plain', radius: 0, fit: 'contain' },
+};
 export const OVERLAY_FADE = 0.25;
 
 export function createOverlay(media, start = 0) {
@@ -166,6 +173,9 @@ export function createOverlay(media, start = 0) {
     split: 0.5, // share of the frame height the region covers (top/bottom)
     feather: 0.08, // soft edge, as a share of the frame height
     fit: 'cover',
+    box: { x: 0.1, y: 0.1, w: 0.8, h: 0.45 }, // used by the free ("custom") region
+    style: 'plain', // custom region: plain | card (white rounded frame)
+    radius: 0, // custom region: corner radius, fraction of the frame's shorter side
     fade: true,
     volume: 1,
     muted: true, // the main track usually carries the voice
@@ -181,6 +191,22 @@ export function overlayDuration(o) {
 export function overlayRect(o, W, H) {
   const even = (x) => Math.max(2, Math.round(x / 2) * 2);
   if (o.region === 'full') return { x: 0, y: 0, w: W, h: H, edge: null, feather: 0 };
+  if (o.region === 'custom') {
+    const b = o.box ?? { x: 0, y: 0, w: 1, h: 1 };
+    const clamp = (v) => Math.min(1, Math.max(0, Number(v) || 0));
+    const x = Math.round(clamp(b.x) * W);
+    const y = Math.round(clamp(b.y) * H);
+    const w = Math.min(even(clamp(b.w) * W), W - x - ((W - x) % 2));
+    const h = Math.min(even(clamp(b.h) * H), H - y - ((H - y) % 2));
+    const radius = Math.round(Math.max(0, o.radius ?? 0) * Math.min(W, H));
+    const card = o.style === 'card';
+    // A card keeps a white margin around the picture.
+    const pad = card ? Math.round(Math.min(W, H) * 0.025) : 0;
+    return {
+      x, y, w, h, edge: null, feather: 0, radius: Math.min(radius, Math.floor(Math.min(w, h) / 2)), card,
+      inner: { x: pad, y: pad, w: even(w - 2 * pad), h: even(h - 2 * pad) },
+    };
+  }
   const h = Math.min(H, even(H * o.split));
   const feather = Math.min(h, Math.round((o.feather ?? 0) * H));
   return o.region === 'bottom'

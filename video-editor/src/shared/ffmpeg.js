@@ -173,10 +173,22 @@ export function buildExport(project, opts) {
       inputs.push('-ss', num(o.in), '-t', num(D), '-i', o.path);
     }
     const r = overlayRect(o, W, H);
-    const fit =
-      o.fit === 'contain'
-        ? [`scale=${r.w}:${r.h}:force_original_aspect_ratio=decrease:force_divisible_by=2`, `pad=${r.w}:${r.h}:(ow-iw)/2:(oh-ih)/2:color=black`]
-        : [`scale=${r.w}:${r.h}:force_original_aspect_ratio=increase`, `crop=${r.w}:${r.h}`];
+    let fit;
+    if (o.region === 'custom') {
+      // Free layer: the picture fills its inner box; "contain" keeps a PNG's
+      // transparency (or the card's white), and a card adds a white margin.
+      const { w: iw, h: ih } = r.inner;
+      const bg = r.card ? 'white' : 'black@0';
+      fit = o.fit === 'contain'
+        ? [`scale=${iw}:${ih}:force_original_aspect_ratio=decrease:force_divisible_by=2`, 'format=rgba', `pad=${iw}:${ih}:(ow-iw)/2:(oh-ih)/2:color=${bg}`]
+        : [`scale=${iw}:${ih}:force_original_aspect_ratio=increase`, `crop=${iw}:${ih}`];
+      if (r.card) fit.push('format=rgba', `pad=${r.w}:${r.h}:${r.inner.x}:${r.inner.y}:color=white`);
+    } else {
+      fit =
+        o.fit === 'contain'
+          ? [`scale=${r.w}:${r.h}:force_original_aspect_ratio=decrease:force_divisible_by=2`, `pad=${r.w}:${r.h}:(ow-iw)/2:(oh-ih)/2:color=black`]
+          : [`scale=${r.w}:${r.h}:force_original_aspect_ratio=increase`, `crop=${r.w}:${r.h}`];
+    }
     const f = [
       'setpts=PTS-STARTPTS',
       `fps=${fps}`,
@@ -198,6 +210,17 @@ export function buildExport(project, opts) {
       );
       chains.push(`[${src}][olm${j}]alphamerge[olf${j}]`);
       src = `olf${j}`;
+    }
+    if (r.radius > 0 && (r.card || o.fit !== 'contain')) {
+      // Rounded corners: an opaque layer gets a rounded-rectangle alpha mask.
+      const R = r.radius;
+      const dx = `max(0\\,max(${R}-X\\,X-${r.w - 1 - R}))`;
+      const dy = `max(0\\,max(${R}-Y\\,Y-${r.h - 1 - R}))`;
+      chains.push(
+        `color=c=white:s=${r.w}x${r.h}:r=${fps},format=gray,geq=lum='255*lte(hypot(${dx}\\,${dy})\\,${R})',trim=end_frame=1,loop=loop=-1:size=1[olr${j}]`,
+      );
+      chains.push(`[${src}][olr${j}]alphamerge[olc${j}]`);
+      src = `olc${j}`;
     }
     const post = [];
     if (o.fade) {

@@ -264,3 +264,39 @@ test('exports many still captions through shared lanes, switching on time', { ti
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('exports a free-position card layer and a transparent PNG avatar', { timeout: 120000 }, async () => {
+  const { createOverlay } = await import('../src/shared/timeline.js');
+  const dir = mkdtempSync(path.join(tmpdir(), 'clipcraft-test-'));
+  try {
+    const p = (n) => path.join(dir, n);
+    ff(['-f', 'lavfi', '-i', 'color=c=blue:s=360x640:r=30:d=3', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', p('bg.mp4')]);
+    ff(['-f', 'lavfi', '-i', 'color=c=red:s=400x300', '-frames:v', '1', p('shot.png')]);
+    // Avatar: a green square on a transparent canvas.
+    ff(['-f', 'lavfi', '-i', 'color=c=green:s=100x100,format=rgba,pad=200:200:50:50:color=black@0.0', '-frames:v', '1', p('avatar.png')]);
+    const project = createProject();
+    project.aspect = '9:16';
+    project.clips = [createClip(await probe(p('bg.mp4')))];
+    const card = { ...createOverlay(await probe(p('shot.png')), 0), out: 3, fade: false, region: 'custom',
+      box: { x: 0.1, y: 0.05, w: 0.8, h: 0.3 }, style: 'card', radius: 0.03, fit: 'cover' };
+    const avatar = { ...createOverlay(await probe(p('avatar.png')), 0), out: 3, fade: false, region: 'custom',
+      box: { x: 0.5, y: 0.6, w: 0.5, h: 0.4 }, style: 'plain', radius: 0, fit: 'contain' };
+    project.overlays = [card, avatar];
+    const { width, height } = frameSize('9:16', 360);
+    const output = p('free.mp4');
+    await exportProject(project, { output, width, height, fps: 30, crf: 18, preset: 'ultrafast' }, { tmpDir: dir });
+    const pixel = (x, y) => [...execFileSync(ffmpegPath(), ['-v', 'error', '-ss', '1', '-i', output, '-frames:v', '1',
+      '-vf', `crop=2:2:${x}:${y},format=rgb24`, '-f', 'rawvideo', '-'])].slice(0, 3);
+    const is = (px, [r, g, b]) => Math.abs(px[0] - r) < 50 && Math.abs(px[1] - g) < 50 && Math.abs(px[2] - b) < 50;
+    // Card box: x 36..324, y 32..224 (360x640 frame); white margin of 9px.
+    assert.ok(is(pixel(180, 120), [255, 0, 0]), `picture inside the card: ${pixel(180, 120)}`);
+    assert.ok(is(pixel(40, 120), [255, 255, 255]), `white margin: ${pixel(40, 120)}`);
+    assert.ok(is(pixel(36, 32), [0, 0, 255]), `rounded corner shows the video: ${pixel(36, 32)}`);
+    assert.ok(is(pixel(180, 300), [0, 0, 255]), `outside the card: ${pixel(180, 300)}`);
+    // Avatar box: x 180..360, y 384..640; the square sits in its middle, the rest is transparent.
+    assert.ok(is(pixel(270, 512), [0, 128, 0]), `avatar drawn: ${pixel(270, 512)}`);
+    assert.ok(is(pixel(190, 400), [0, 0, 255]), `avatar's transparent area shows the video: ${pixel(190, 400)}`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

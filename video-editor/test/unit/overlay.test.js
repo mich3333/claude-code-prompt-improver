@@ -69,3 +69,27 @@ test('inserting a card moves later overlays with their clips', () => {
   const res = insertClip(p, 0, createCard('#000000', 3));
   assert.equal(res.overlays[0].start, 5);
 });
+
+test('free layers sit where their box says, cards keep a white margin', () => {
+  const o = { ...createOverlay(media(), 0), region: 'custom', box: { x: 0.04, y: 0.03, w: 0.92, h: 0.38 }, style: 'card', radius: 0.035 };
+  const r = overlayRect(o, 1080, 1920);
+  assert.deepEqual([r.x, r.y, r.w, r.h], [43, 58, 994, 730]);
+  assert.equal(r.radius, 38);
+  assert.deepEqual(r.inner, { x: 27, y: 27, w: 940, h: 676 });
+  const plain = overlayRect({ ...o, style: 'plain', radius: 0 }, 1080, 1920);
+  assert.deepEqual(plain.inner, { x: 0, y: 0, w: plain.w, h: plain.h });
+  // A box past the frame edge is clipped to it.
+  const edge = overlayRect({ ...o, box: { x: 0.8, y: 0.9, w: 0.5, h: 0.5 } }, 1080, 1920);
+  assert.ok(edge.x + edge.w <= 1080 && edge.y + edge.h <= 1920);
+});
+
+test('export: a card pads the picture onto white with rounded corners; a PNG avatar keeps its transparency', () => {
+  const card = buildExport(projectWithOverlay({ region: 'custom', box: { x: 0.04, y: 0.03, w: 0.92, h: 0.38 }, style: 'card', radius: 0.035, fit: 'contain' }), opts).filter;
+  assert.match(card, /pad=940:676:\(ow-iw\)\/2:\(oh-ih\)\/2:color=white/);
+  assert.match(card, /pad=994:730:27:27:color=white/);
+  assert.match(card, /geq=lum='255\*lte\(hypot\(max\(0\\,max\(38-X/);
+  assert.match(card, /overlay=x=43:y=58:/);
+  const avatar = buildExport(projectWithOverlay({ region: 'custom', box: { x: 0.42, y: 0.56, w: 0.58, h: 0.44 }, style: 'plain', radius: 0, fit: 'contain' }), opts).filter;
+  assert.match(avatar, /color=black@0/);
+  assert.doesNotMatch(avatar, /hypot/);
+});

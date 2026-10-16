@@ -41,6 +41,14 @@ export const GRAPHIC_TYPES = {
       headline: false, years: false,
     },
   },
+  waves: {
+    name: 'רקע גלים',
+    description: 'רקע כחול כהה עם קווים זורמים, לסרטוני הסבר עם אווטאר',
+    full: true,
+    loop: 6, // seconds of seamless motion, repeated for the whole duration
+    background: true,
+    defaults: { label: '', duration: 15, years: false },
+  },
   year: {
     name: 'ציר שנים',
     description: 'שנה גדולה וציר זמן עם נקודה זהובה',
