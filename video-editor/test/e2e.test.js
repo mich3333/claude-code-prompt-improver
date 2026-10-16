@@ -143,6 +143,49 @@ test('edit and export a video through the UI', { skip: noDisplay && 'no display 
     await page.waitForTimeout(1200);
     await shot('02c-split-screen');
 
+    // Presenter framing: the photo clip fills the lower part of a 9:16 frame with a push-in.
+    const photoAt = await page.evaluate(() => {
+      const { player } = window.clipcraft;
+      for (let t = 0; t < player.duration; t += 0.05) {
+        const seg = player.clipAt(t);
+        if (seg?.clip.kind === 'image') return { start: seg.start, end: seg.end, index: seg.index };
+      }
+      return null;
+    });
+    assert.ok(photoAt, 'the photo is on the main track');
+    await page.click(`.tl-track-video .tl-clip >> nth=${photoAt.index}`);
+    await page.click('#framing-presenter');
+    proj = await project();
+    const framedClip = proj.clips[photoAt.index];
+    assert.equal(proj.aspect, '9:16');
+    assert.equal(framedClip.fit, 'cover');
+    assert.equal(framedClip.pushIn, true);
+    assert.ok(framedClip.areaTop > 0.3 && framedClip.focusY < 0.5, `presenter framing: ${JSON.stringify(framedClip)}`);
+    await page.click('#btn-undo');
+    assert.equal((await project()).clips[photoAt.index].pushIn, false, 'the preset is one undo step');
+    await page.click('#btn-redo');
+    await page.evaluate(() => {
+      const input = document.getElementById('framing-zoom');
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '120');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('pointerup', { bubbles: true }));
+    });
+    assert.equal((await project()).clips[photoAt.index].zoom, 1.2);
+    // The preview leaves the top of the frame black and draws the photo below.
+    const photoTime = (photoAt.start + photoAt.end) / 2;
+    const layerUp = photoTime >= 4 && photoTime < 8; // the split-screen layer covers the top then
+    await page.evaluate((t) => window.clipcraft.player.seek(t), photoTime);
+    await page.waitForTimeout(400);
+    // (The canvas shows media:// files, so read it from a screenshot rather than getImageData.)
+    await page.locator('#preview').screenshot({ path: p('preview.png') });
+    const shotPx = (fy) => [...execFileSync(ffmpegPath(), ['-v', 'error', '-i', p('preview.png'),
+      '-vf', `crop=2:2:iw/2:ih*${fy},format=rgb24`, '-f', 'rawvideo', '-'])].slice(0, 3);
+    const previewPx = { top: shotPx(0.2), bottom: shotPx(0.8) };
+    const isTeal = ([r, g, b]) => r < 40 && Math.abs(g - 128) < 30 && Math.abs(b - 128) < 30;
+    if (!layerUp) assert.ok(previewPx.top.every((v) => v < 10), `preview top is empty: ${previewPx.top}`);
+    assert.ok(isTeal(previewPx.bottom), `preview bottom shows the photo: ${previewPx.bottom}`);
+    await shot('02d-presenter');
+
     // Switch to vertical and play for a moment.
     await page.selectOption('#aspect', '9:16');
     await page.keyboard.press('Escape');
@@ -180,6 +223,11 @@ test('edit and export a video through the UI', { skip: noDisplay && 'no display 
     const top = px(200);
     assert.ok(top[0] < 40 && Math.abs(top[1] - 128) < 30 && Math.abs(top[2] - 128) < 30, `top half is teal: ${top}`);
     assert.notDeepEqual(px(1100), top);
+    // The presenter-framed photo: the bottom of the frame is the photo, the top above its area is black.
+    const framedPx = (y) => [...execFileSync(ffmpegPath(), ['-v', 'error', '-ss', String(photoTime), '-i', output, '-frames:v', '1',
+      '-vf', `crop=2:2:360:${y},format=rgb24`, '-f', 'rawvideo', '-'])].slice(0, 3);
+    assert.ok(isTeal(framedPx(1100)), `exported photo in the lower part: ${framedPx(1100)}`);
+    if (!layerUp) assert.ok(framedPx(200).every((v) => v < 16), `exported top is empty: ${framedPx(200)}`);
     if (shots) ff(['-ss', '5.5', '-i', output, '-frames:v', '1', path.join(shots, '07-exported-split.png')]);
     assert.deepEqual(errors, []);
   } finally {

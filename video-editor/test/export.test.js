@@ -264,3 +264,81 @@ test('exports many still captions through shared lanes, switching on time', { ti
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('exports focus point, zoom and a smooth push-in where the preview draws them', { timeout: 120000 }, async () => {
+  const { framingArea, placePicture, PRESENTER } = await import('../src/shared/framing.js');
+  const dir = mkdtempSync(path.join(tmpdir(), 'clipcraft-test-'));
+  try {
+    const p = (n) => path.join(dir, n);
+    // A 300×400 "selfie": black, with a white 20×20 "face" centred at (150, 120)
+    // (30% down, the preset's focus point) and a "shoulder" mark at (150, 300).
+    ff(['-f', 'lavfi', '-i', 'color=c=black:s=300x400,format=rgb24,drawbox=x=140:y=110:w=20:h=20:color=white:t=fill,drawbox=x=140:y=290:w=20:h=20:color=white:t=fill',
+      '-frames:v', '1', p('selfie.png')]);
+    const media = await probe(p('selfie.png'));
+    const project = createProject();
+    project.aspect = '9:16';
+    // 0–3s: the presenter preset (lower part, push-in). 3–5s: still, focus 20%/10%, zoom 130%.
+    const presenter = { ...createClip(media), ...PRESENTER, out: 3 };
+    const still = { ...createClip(media), fit: 'cover', focusX: 0.2, focusY: 0.1, zoom: 1.3, out: 2 };
+    project.clips = [presenter, still];
+    const { width: W, height: H } = frameSize('9:16', 360);
+    const output = p('framed.mp4');
+    await exportProject(project, { output, width: W, height: H, fps: 30, crf: 0, preset: 'ultrafast' }, { tmpDir: dir });
+
+    const raw = execFileSync(ffmpegPath(), ['-v', 'error', '-i', output, '-f', 'rawvideo', '-pix_fmt', 'gray', 'pipe:1'],
+      { maxBuffer: 1 << 28 });
+    const frames = raw.length / (W * H);
+    assert.equal(frames, 150);
+    // Brightness-weighted centre of the white marks in rows y0..y1 of frame f (pixel centres at +0.5).
+    const marker = (f, y0 = 0, y1 = H) => {
+      let sx = 0; let sy = 0; let n = 0;
+      for (let y = y0; y < y1; y++) {
+        for (let x = 0; x < W; x++) {
+          const v = raw[f * W * H + y * W + x];
+          if (v > 30) { sx += (x + 0.5) * v; sy += (y + 0.5) * v; n += v; }
+        }
+      }
+      return n ? [sx / n, sy / n] : null;
+    };
+    const expected = (clip, prog, fy = 0.3) => {
+      const area = framingArea(clip, W, H);
+      const pl = placePicture(clip, 300, 400, area.w, area.h, prog);
+      return [area.x + pl.x + 0.5 * pl.w, area.y + pl.y + fy * pl.h];
+    };
+    const near = (got, want, what) => assert.ok(Math.hypot(got[0] - want[0], got[1] - want[1]) < 1.5,
+      `${what}: exported ${got.map((v) => v.toFixed(1))}, preview ${want.map((v) => v.toFixed(1))}`);
+
+    // The presenter puts the face in the lower half and pushes in towards it:
+    // the face (the focus point) stays put while the shoulder mark moves away.
+    const face = (f) => marker(f, 0, 500);
+    const shoulder = (f) => marker(f, 500);
+    for (const f of [0, 45, 89]) {
+      near(face(f), expected(presenter, f / 90), `face, frame ${f}`);
+      near(shoulder(f), expected(presenter, f / 90, 0.75), `shoulder, frame ${f}`);
+    }
+    assert.ok(face(0)[1] > H / 2, 'face in the lower half');
+    const area = framingArea(presenter, W, H);
+    const above = raw.subarray(0, (area.y - 2) * W);
+    assert.ok(above.every((v) => v < 8), 'nothing is drawn above the picture area');
+    // Smooth: the marker moves by nearly the same amount every frame (no whole-pixel jumps).
+    const ys = Array.from({ length: 90 }, (_, f) => shoulder(f)[1]);
+    const steps = ys.slice(1).map((y, i) => y - ys[i]);
+    assert.ok(steps.every((s) => s > 0.1), `moves every frame: ${steps.map((s) => s.toFixed(2))}`);
+    const jerk = Math.max(...steps.slice(1).map((s, i) => Math.abs(s - steps[i])));
+    assert.ok(jerk < 0.25, `steady motion (max step change ${jerk.toFixed(3)} px)`);
+
+    // Still clip: cover is 480×640, zoomed 130% to 624×832, shifted by 20%/10% of the overflow.
+    const stillPl = placePicture(still, 300, 400, W, H);
+    close(stillPl.w, 624);
+    close(stillPl.x, (W - 624) * 0.2);
+    close(stillPl.y, (H - 832) * 0.1);
+    near(marker(120, 0, 400), expected(still, 0), 'focus and zoom');
+    near(marker(120, 400), expected(still, 0, 0.75), 'focus and zoom, lower mark');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+function close(a, b) {
+  assert.ok(Math.abs(a - b) < 1e-6, `${a} vs ${b}`);
+}

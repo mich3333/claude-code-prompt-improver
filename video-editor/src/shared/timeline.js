@@ -1,6 +1,8 @@
 // Project model and timeline math, shared by the renderer (preview, timeline
 // UI) and the main process (export). Pure functions only.
 
+import { FRAMING_DEFAULTS } from './framing.js';
+
 export const ASPECTS = {
   '16:9': { label: 'רוחבי 16:9', w: 16, h: 9 },
   '9:16': { label: 'אנכי 9:16', w: 9, h: 16 },
@@ -71,6 +73,7 @@ export function createClip(media) {
     volume: 1,
     muted: false,
     fit: 'contain',
+    ...FRAMING_DEFAULTS, // focus point, zoom, picture area, push-in (framing.js)
     filter: 'none',
     brightness: 100,
     contrast: 100,
