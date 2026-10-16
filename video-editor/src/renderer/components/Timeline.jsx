@@ -1,4 +1,4 @@
-// Timeline: ruler, video/text/music tracks, playhead and drag interactions.
+// Timeline: ruler, video/overlay/text/music tracks, playhead and drag interactions.
 // Dragging, trimming and scrubbing follow the pointer 1:1 with no easing;
 // the only animation is the short glide of neighbours after a reorder drop,
 // which shows where things went.
@@ -7,8 +7,10 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { flushSync } from 'react-dom';
 import { motion } from 'motion/react';
 import { PRESETS } from '../../shared/effects.js';
-import { formatTime, layoutClips, MIN_CLIP_DURATION, totalDuration, TRANSITIONS } from '../../shared/timeline.js';
-import { addMediaToTimeline, actions } from '../actions.js';
+import {
+  formatTime, layoutClips, MIN_CLIP_DURATION, OVERLAY_REGIONS, overlayDuration, totalDuration, TRANSITIONS,
+} from '../../shared/timeline.js';
+import { addMediaToTimeline, addOverlay, actions } from '../actions.js';
 import { move as moveTransition } from '../motion.js';
 import { player, store, timelineApi, usePlayer, useStore } from '../state.js';
 import { Button, IconButton } from './controls.jsx';
@@ -17,6 +19,7 @@ const MIN_PPS = 8;
 const MAX_PPS = 400;
 const SNAP_PX = 8;
 const TEXT_ROW_H = 30;
+const OVERLAY_ROW_H = 40;
 const sliderToPps = (v) => MIN_PPS * (MAX_PPS / MIN_PPS) ** (v / 100);
 const ppsToSlider = (p) => (100 * Math.log(p / MIN_PPS)) / Math.log(MAX_PPS / MIN_PPS);
 
@@ -54,16 +57,17 @@ function Playhead({ pps, scrollRef }) {
   );
 }
 
-function textRows(texts) {
+// Stacks overlapping items into rows: { rowOf: id -> row, count }.
+function stackRows(items, endOf = (x) => x.end) {
   const ends = [];
   const rowOf = new Map();
-  for (const t of [...texts].sort((a, b) => a.start - b.start)) {
+  for (const t of [...items].sort((a, b) => a.start - b.start)) {
     let r = ends.findIndex((end) => end <= t.start + 1e-6);
     if (r === -1) {
       r = ends.length;
       ends.push(0);
     }
-    ends[r] = t.end;
+    ends[r] = endOf(t);
     rowOf.set(t.id, r);
   }
   return { rowOf, count: Math.max(1, ends.length) };
@@ -76,6 +80,7 @@ export function Timeline() {
   const [viewW, setViewW] = useState(800);
   const [dragging, setDragging] = useState(null); // { id, dx }
   const [marker, setMarker] = useState(null); // insert position (seconds)
+  const [overlayMarker, setOverlayMarker] = useState(null); // overlay drop time (seconds)
   const [glideExcept, setGlideExcept] = useState(null); // clip id just dropped; others glide
   const scrollRef = useRef(null);
   const contentRef = useRef(null);
@@ -127,6 +132,7 @@ export function Timeline() {
     const points = [0, player.time, totalDuration(store.project)];
     for (const s of layoutClips(store.project.clips)) points.push(s.start, s.end);
     for (const tx of store.project.texts) if (!exclude.includes(tx.id)) points.push(tx.start, tx.end);
+    for (const o of store.project.overlays ?? []) if (!exclude.includes(o.id)) points.push(o.start, o.start + overlayDuration(o));
     let best = t;
     let bestPx = SNAP_PX;
     for (const p of points) {
@@ -150,7 +156,7 @@ export function Timeline() {
   // ---- interactions -------------------------------------------------
 
   const onScrub = (e) => {
-    if (e.button !== 0 || e.target.closest('.tl-clip, .tl-text, .tl-music')) return;
+    if (e.button !== 0 || e.target.closest('.tl-clip, .tl-overlay, .tl-text, .tl-music')) return;
     player.pause();
     player.seek(timeAt(e.clientX));
     if (e.target.closest('.tl-track')) store.select(null);
@@ -250,6 +256,51 @@ export function Timeline() {
     });
   };
 
+  // Overlays sit at a free time position. Dragging the body moves them; the
+  // left edge trims the start (keeping later frames in place), the right edge the end.
+  const onOverlayDown = (e, overlay) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    player.pause();
+    store.select({ type: 'overlay', id: overlay.id });
+    const handle = e.target.dataset.handle;
+    const { start: s0, in: in0, out: out0 } = overlay;
+    const isVideo = overlay.kind === 'video';
+    const maxOut = isVideo ? overlay.sourceDuration : Infinity;
+    const live = (p) => p.overlays.find((x) => x.id === overlay.id);
+    startDrag(e, ppsRef.current, {
+      threshold: handle ? 0 : 3,
+      move: (dt) => {
+        store.mutate((p) => {
+          const o = live(p);
+          if (handle === 'left') {
+            // Earliest start: the source's first frame (video) or time 0.
+            const minStart = Math.max(0, isVideo ? s0 - in0 : 0);
+            const maxStart = s0 + (out0 - in0) - MIN_CLIP_DURATION;
+            const start = Math.min(maxStart, Math.max(minStart, snap(s0 + dt, [overlay.id])));
+            o.start = start;
+            if (isVideo) o.in = in0 + (start - s0);
+            else o.out = out0 - (start - s0);
+          } else if (handle === 'right') {
+            const end = snap(s0 + (out0 - in0) + dt, [overlay.id]);
+            o.out = Math.min(maxOut, Math.max(o.in + MIN_CLIP_DURATION, o.in + (end - o.start)));
+          } else {
+            const len = out0 - in0;
+            let start = Math.max(0, snap(s0 + dt, [overlay.id]));
+            const snappedEnd = snap(start + len, [overlay.id]);
+            if (snappedEnd !== start + len && start === s0 + dt) start = snappedEnd - len;
+            o.start = Math.max(0, start);
+          }
+        });
+        const o = live(store.project);
+        const end = o.start + overlayDuration(o);
+        if (handle === 'right') player.seek(end - 0.001);
+        else if (player.time < o.start || player.time >= end) player.seek(o.start);
+      },
+      end: () => store.commit(),
+    });
+  };
+
   const onMusicDown = (e) => {
     if (e.button !== 0) return;
     e.stopPropagation();
@@ -279,6 +330,23 @@ export function Timeline() {
     if (m && m.kind !== 'audio') addMediaToTimeline(m, insertIndexAt(timeAt(e.clientX)));
   };
 
+  // Media bin -> overlay track (a layer starting where it is dropped).
+  const onOverlayDragOver = (e) => {
+    if (!e.dataTransfer.types.includes('application/x-clipcraft-media')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setOverlayMarker(snap(timeAt(e.clientX)));
+  };
+  const onOverlayDrop = (e) => {
+    const id = e.dataTransfer.getData('application/x-clipcraft-media');
+    setOverlayMarker(null);
+    if (!id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const media = store.project.media.find((x) => x.id === id);
+    if (media && media.kind !== 'audio') addOverlay(media, snap(timeAt(e.clientX)));
+  };
+
   // ---- render ---------------------------------------------------------
 
   const steps = [0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300];
@@ -286,8 +354,11 @@ export function Timeline() {
   const ticks = [];
   for (let t = 0; t * pps < width; t += step) ticks.push(t);
 
-  const { rowOf, count: textRowCount } = textRows(project.texts);
+  const { rowOf, count: textRowCount } = stackRows(project.texts);
   const textTrackH = textRowCount * TEXT_ROW_H + 8;
+  const overlays = project.overlays ?? [];
+  const { rowOf: overlayRowOf, count: overlayRowCount } = stackRows(overlays, (o) => o.start + overlayDuration(o));
+  const overlayTrackH = overlayRowCount * OVERLAY_ROW_H + 8;
 
   const m = project.music;
   let musicLen = 0;
@@ -313,6 +384,9 @@ export function Timeline() {
         <div className="tl-headers">
           <div className="tl-header-ruler" />
           <div className="tl-header">וידאו</div>
+          <div className="tl-header tl-header-overlay" style={{ height: overlayTrackH }} title="שכבה מעל הווידאו: מסך מפוצל או מסך מלא">
+            שכבה עליונה
+          </div>
           <div className="tl-header" style={{ height: textTrackH }}>טקסט</div>
           <div className="tl-header tl-header-music">מוזיקה</div>
         </div>
@@ -369,6 +443,36 @@ export function Timeline() {
                 );
               })}
               {marker !== null && <div className="tl-insert-marker" style={{ left: marker * pps }} />}
+            </div>
+
+            <div className="tl-track tl-track-overlay" style={{ height: overlayTrackH }}
+              onDragOver={onOverlayDragOver} onDragLeave={() => setOverlayMarker(null)} onDrop={onOverlayDrop}>
+              {!overlays.length && (
+                <div className="tl-empty small" dir="rtl">למסך מפוצל: גררו לכאן תמונה או סרטון.</div>
+              )}
+              {overlays.map((o) => {
+                const badges = [OVERLAY_REGIONS[o.region]];
+                if (o.hasAudio && !o.muted) badges.push('עם סאונד');
+                return (
+                  <div key={o.id} data-id={o.id} title={`${o.name} — ${formatTime(overlayDuration(o), true)}`}
+                    className={`tl-overlay${selection?.id === o.id ? ' selected' : ''}`}
+                    style={{
+                      left: o.start * pps,
+                      width: Math.max(6, overlayDuration(o) * pps),
+                      top: 4 + overlayRowOf.get(o.id) * OVERLAY_ROW_H,
+                      backgroundImage: o.thumbnail ? `url("${o.thumbnail}")` : undefined,
+                    }}
+                    onPointerDown={(e) => onOverlayDown(e, o)}>
+                    <div className="tl-clip-label">
+                      <span className="name">{o.name}</span>
+                      {badges.map((b) => <span key={b} className="badge">{b}</span>)}
+                    </div>
+                    <div className="tl-handle left" data-handle="left" />
+                    <div className="tl-handle right" data-handle="right" />
+                  </div>
+                );
+              })}
+              {overlayMarker !== null && <div className="tl-insert-marker" style={{ left: overlayMarker * pps }} />}
             </div>
 
             <div className="tl-track tl-track-text" style={{ height: textTrackH }}>

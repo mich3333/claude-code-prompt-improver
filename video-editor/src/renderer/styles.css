@@ -11,6 +11,7 @@
   --clip: #2d5fa8;
   --text-clip: #8a4fd1;
   --music-clip: #2f8f6b;
+  --overlay-clip: #a65a32;
   --danger: #e5484d;
   --warn: #e3a008;
   --success: #30a46c;
@@ -158,6 +159,7 @@ select {
 }
 .bin-item:hover { border-color: var(--line-2); }
 .bin-item.audio { cursor: default; }
+.bin-actions { display: flex; }
 .bin-thumb {
   width: 56px; height: 34px; border-radius: 4px; background: #000 center / cover no-repeat;
   display: grid; place-items: center; color: var(--music-clip);
@@ -268,6 +270,7 @@ kbd {
   border-bottom: 1px solid var(--line);
 }
 .tl-header-music { height: 40px; }
+.tl-header-overlay { line-height: 1.25; padding-right: 6px; }
 .tl-scroll { overflow-x: auto; overflow-y: hidden; position: relative; }
 .tl-content { position: relative; min-height: 100%; }
 .tl-ruler { position: relative; height: 24px; border-bottom: 1px solid var(--line); cursor: text; }
@@ -282,7 +285,7 @@ kbd {
 .tl-empty { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); white-space: nowrap; pointer-events: none; }
 .tl-empty.small { font-size: 12px; }
 
-.tl-clip, .tl-text, .tl-music {
+.tl-clip, .tl-overlay, .tl-text, .tl-music {
   position: absolute;
   border-radius: 6px;
   overflow: hidden;
@@ -309,6 +312,13 @@ kbd {
   background: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.28) 0 4px, transparent 4px 9px);
   border-right: 1px dashed rgba(255, 255, 255, 0.6);
 }
+.tl-overlay {
+  height: 36px;
+  background-color: var(--overlay-clip);
+  background-repeat: repeat-x;
+  background-size: auto 100%;
+}
+.tl-overlay .tl-clip-label { padding: 2px 8px; }
 .tl-text {
   height: 26px; background: var(--text-clip); display: flex; align-items: center; padding: 0 8px; font-size: 11px; white-space: nowrap;
 }
@@ -317,7 +327,7 @@ kbd {
   top: 6px; bottom: 6px; background: var(--music-clip); display: flex; align-items: center; padding: 0 8px; font-size: 11px;
   background-image: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.12) 0 2px, transparent 2px 6px);
 }
-.tl-clip.selected, .tl-text.selected, .tl-music.selected { outline: 2px solid #fff; outline-offset: -1px; z-index: 3; }
+.tl-clip.selected, .tl-overlay.selected, .tl-text.selected, .tl-music.selected { outline: 2px solid #fff; outline-offset: -1px; z-index: 3; }
 .tl-handle { position: absolute; top: 0; bottom: 0; width: 8px; cursor: ew-resize; z-index: 2; }
 .tl-handle.left { left: 0; }
 .tl-handle.right { right: 0; }

@@ -211,6 +211,7 @@ ipcMain.handle('project:open', async () => {
   const project = JSON.parse(await readFile(filePath, 'utf8'));
   const paths = [
     ...(project.clips ?? []).map((c) => c.path),
+    ...(project.overlays ?? []).map((o) => o.path),
     ...(project.media ?? []).map((m) => m.path),
     ...(project.music ? [project.music.path] : []),
   ];

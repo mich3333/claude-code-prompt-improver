@@ -116,6 +116,32 @@ test('edit and export a video through the UI', { skip: noDisplay && 'no display 
     await page.waitForTimeout(400);
     await shot('02b-templates');
 
+    // Split screen: the teal photo as a top layer at 4s, moved, then set to the bottom half and back.
+    await page.click('.bin .segmented button[data-value="media"]');
+    await page.evaluate(() => window.clipcraft.player.seek(4));
+    await page.click('.bin-item >> nth=2 >> .bin-overlay');
+    proj = await project();
+    assert.equal(proj.overlays.length, 1);
+    assert.equal(proj.overlays[0].kind, 'image');
+    assert.equal(proj.overlays[0].start, 4);
+    assert.equal(proj.overlays[0].region, 'top');
+    await page.click('.insp button[data-value="bottom"]');
+    assert.equal((await project()).overlays[0].region, 'bottom');
+    await page.click('.insp button[data-value="top"]');
+    const block = await page.locator('.tl-overlay').boundingBox();
+    const pps = block.width / 4; // a photo layer lasts 4s
+    await page.mouse.move(block.x + block.width / 2, block.y + block.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(block.x + block.width / 2 + pps, block.y + block.height / 2, { steps: 6 });
+    await page.mouse.up();
+    const overlayStart = (await project()).overlays[0].start;
+    assert.ok(Math.abs(overlayStart - 5) < 0.15, `overlay moved to ${overlayStart}`);
+    await page.click('#btn-undo');
+    assert.equal((await project()).overlays[0].start, 4);
+    await page.evaluate(() => window.clipcraft.player.seek(5.5));
+    await page.waitForTimeout(1200);
+    await shot('02c-split-screen');
+
     // Switch to vertical and play for a moment.
     await page.selectOption('#aspect', '9:16');
     await page.keyboard.press('Escape');
@@ -147,6 +173,13 @@ test('edit and export a video through the UI', { skip: noDisplay && 'no display 
     assert.ok(info.streams.some((s) => s.codec_type === 'audio'));
     assert.ok(Math.abs(Number(info.format.duration) - expected) < 0.2, `duration ${info.format.duration} vs ${expected}`);
     if (shots) ff(['-ss', '2.2', '-i', output, '-frames:v', '1', path.join(shots, '06-exported-frame.png')]);
+    // The split-screen layer is in the top half of the exported frame at 5.5s.
+    const px = (y) => [...execFileSync(ffmpegPath(), ['-v', 'error', '-ss', '5.5', '-i', output, '-frames:v', '1',
+      '-vf', `crop=2:2:360:${y},format=rgb24`, '-f', 'rawvideo', '-'])].slice(0, 3);
+    const top = px(200);
+    assert.ok(top[0] < 40 && Math.abs(top[1] - 128) < 30 && Math.abs(top[2] - 128) < 30, `top half is teal: ${top}`);
+    assert.notDeepEqual(px(1100), top);
+    if (shots) ff(['-ss', '5.5', '-i', output, '-frames:v', '1', path.join(shots, '07-exported-split.png')]);
     assert.deepEqual(errors, []);
   } finally {
     await app.evaluate(({ app: a }) => a.exit(0)).catch(() => {});

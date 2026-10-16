@@ -5,6 +5,7 @@ A desktop video editor (Electron + React + Motion, with FFmpeg for export) with 
 ## Features
 
 - **Cut and join**: import videos and photos, drag to reorder, trim by dragging clip edges (or set start/end at the playhead), and split at the playhead.
+- **Split screen**: put a photo or video on a layer above the main video, in the top or bottom part of the frame or full frame, with a soft blended edge between the halves.
 - **Text and captions**: multi-line titles with full Hebrew/RTL support, 5 fonts, size, color, bold, shadow/outline/box styles, and fade in/out. Drag text directly on the preview to position it.
 - **Music and audio**: a background music track with volume, start point, "skip intro", loop, and fade in/out. Each clip has its own volume and mute.
 - **Filters**: 8 color presets (B&W, Sepia, Vintage, Vivid, Dramatic, Faded, Cool) plus brightness, contrast and saturation.
@@ -42,6 +43,17 @@ This builds for the OS you run it on: `.dmg` on macOS, an `.exe` installer on Wi
 3. **הוספת טקסט** (Add text) puts a title at the playhead. Type it in the settings panel and drag it on the preview to move it.
 4. **הוספת מוזיקה** (Add music) sets the background track. Click the green bar to change volume, start point and fades.
 5. Pick the **מסגרת** (Frame) size at the top, then **ייצוא** (Export).
+
+## Split screen
+
+For the "graphic on top, talking head below" look common in vertical videos:
+
+1. Put your talking-head video on the main video track. Frame it so your face sits in the lower half.
+2. Add the graphic (a photo, screen recording or chart animation) as a layer: click the layers button next to it in the media library (it is placed at the playhead), or drag it onto the **שכבה עליונה** (Overlay) track at the time you want.
+3. In the settings panel, choose **למעלה / למטה / מסך מלא** (top / bottom / full frame), the height of the area (30–70%), and how soft the edge between the halves is.
+4. Drag the layer on the timeline to move it, or drag its edges to trim it. Layers are muted by default, so your voice from the main track carries on; turn on "include sound" if you need the layer's audio.
+
+Layers can overlap: later layers are drawn on top. Each layer fades in and out over a quarter of a second (you can turn this off).
 
 The interface is in Hebrew and laid out right to left. The timeline and the playback controls stay left to right, because time runs that way in every video editor. Keyboard shortcuts use physical keys, so they work on a Hebrew keyboard layout too.
 
@@ -116,7 +128,7 @@ test/                   unit, export and UI tests
 ## Known limitations
 
 - The preview uses Chromium's video decoders. HEVC/H.265 (some iPhone videos) previews only where the OS supports it (macOS, most Windows PCs). Export always works because it uses FFmpeg.
-- One music track, one video track, and a text track.
+- One music track, one main video track, one overlay track, and a text track. Overlays always span the full frame width.
 
 ---
 
@@ -126,6 +138,7 @@ test/                   unit, export and UI tests
 2. בטרמינל: `cd video-editor`, אחר כך `npm install`, ואז `npm start`. לפיתוח עם רענון אוטומטי: `npm run dev`.
 3. לחצו על **ייבוא מדיה** (או גררו קבצים לחלון), ערכו על ציר הזמן, והוסיפו טקסט (**הוספת טקסט**) ומוזיקה (**הוספת מוזיקה**).
    בלשונית **תבניות** יש פתיח, ציטוט, כותרת תחתונה, סיום וצבע חם בסגנון Claude. לחיצה אחת מוסיפה אותם.
+   **מסך מפוצל**: שימו את הסרטון שלכם (עם הפנים) במסלול הווידאו, ואת הגרפיקה הוסיפו כשכבה עליונה בכפתור השכבות שליד הקובץ בספריית המדיה. בפאנל ההגדרות בוחרים למעלה / למטה / מסך מלא, את הגובה ואת ריכוך הקצה.
 4. בחרו גודל **מסגרת** ולחצו על **ייצוא** כדי לשמור את הסרטון כ-MP4.
 
 ליצירת קובץ התקנה למחשב שלכם: `npm run dist`.

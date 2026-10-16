@@ -48,7 +48,7 @@ export function newId(prefix) {
 }
 
 export function createProject() {
-  return { version: 1, aspect: '16:9', clips: [], texts: [], music: null };
+  return { version: 1, aspect: '16:9', clips: [], overlays: [], texts: [], music: null };
 }
 
 export function createClip(media) {
@@ -135,6 +135,66 @@ export function createMusic(media) {
     fadeIn: 1,
     fadeOut: 2,
   };
+}
+
+// ---- Overlay layer (split screen) -------------------------------------
+// Videos or photos drawn above the main track at a fixed timeline time:
+// in the top or bottom part of the frame (a split screen) or full frame.
+// The edge facing the other half fades out, so the two halves blend.
+
+export const OVERLAY_REGIONS = { top: 'למעלה', bottom: 'למטה', full: 'מסך מלא' };
+export const OVERLAY_FADE = 0.25;
+
+export function createOverlay(media, start = 0) {
+  const isImage = media.kind === 'image';
+  return {
+    id: newId('ovl'),
+    kind: isImage ? 'image' : 'video',
+    path: media.path,
+    url: media.url,
+    name: media.name,
+    thumbnail: media.thumbnail ?? null,
+    sourceDuration: isImage ? null : media.duration,
+    width: media.width ?? null,
+    height: media.height ?? null,
+    hasAudio: !isImage && Boolean(media.hasAudio),
+    start,
+    in: 0,
+    out: isImage ? DEFAULT_IMAGE_DURATION : media.duration,
+    speed: 1,
+    region: 'top',
+    split: 0.5, // share of the frame height the region covers (top/bottom)
+    feather: 0.08, // soft edge, as a share of the frame height
+    fit: 'cover',
+    fade: true,
+    volume: 1,
+    muted: true, // the main track usually carries the voice
+  };
+}
+
+export function overlayDuration(o) {
+  return Math.max(MIN_CLIP_DURATION, o.out - o.in);
+}
+
+// Pixel rectangle of an overlay and which edge (if any) is feathered.
+// Heights are even so the export stays H.264-friendly.
+export function overlayRect(o, W, H) {
+  const even = (x) => Math.max(2, Math.round(x / 2) * 2);
+  if (o.region === 'full') return { x: 0, y: 0, w: W, h: H, edge: null, feather: 0 };
+  const h = Math.min(H, even(H * o.split));
+  const feather = Math.min(h, Math.round((o.feather ?? 0) * H));
+  return o.region === 'bottom'
+    ? { x: 0, y: H - h, w: W, h, edge: 'top', feather }
+    : { x: 0, y: 0, w: W, h, edge: 'bottom', feather };
+}
+
+// Opacity of an overlay at timeline time t (short fade in/out when enabled).
+export function overlayAlpha(o, t) {
+  const end = o.start + overlayDuration(o);
+  if (t < o.start || t >= end) return 0;
+  if (!o.fade) return 1;
+  const f = Math.min(OVERLAY_FADE, (end - o.start) / 2);
+  return Math.min(1, (t - o.start) / f, (end - t) / f);
 }
 
 // Duration a clip occupies on the timeline (after trimming and speed).
@@ -240,9 +300,10 @@ export function insertClip(project, index, clip, prepare) {
   const shift = anchor ? after[index + 1].start - anchor.start : 0;
   const moved = (start) => start >= at - 1e-6 && shift !== 0;
   const texts = project.texts.map((t) => (moved(t.start) ? { ...t, start: t.start + shift, end: t.end + shift } : t));
+  const overlays = (project.overlays ?? []).map((o) => (moved(o.start) ? { ...o, start: o.start + shift } : o));
   let { music } = project;
   if (music && music.start > 0 && moved(music.start)) music = { ...music, start: music.start + shift };
-  return { clips, texts, music, start: after[index].start, end: after[index].end };
+  return { clips, texts, overlays, music, start: after[index].start, end: after[index].end };
 }
 
 // Text direction from the first strong character (Hebrew/Arabic => rtl).

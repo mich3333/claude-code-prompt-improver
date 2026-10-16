@@ -2,7 +2,9 @@
 // Pure: no filesystem or process access, so it is unit-testable.
 
 import { clipOps, toFfmpegFilters } from './effects.js';
-import { clipDuration, effectiveTransition, layoutClips, totalDuration } from './timeline.js';
+import {
+  clipDuration, effectiveTransition, layoutClips, OVERLAY_FADE, overlayDuration, overlayRect, totalDuration,
+} from './timeline.js';
 
 const AUDIO_FMT = 'aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo';
 const TEXT_FADE = 0.4;
@@ -126,8 +128,63 @@ export function buildExport(project, opts) {
     a = `xa${i}`;
   }
 
-  // Text overlays: pre-rendered transparent frames, shown between start/end.
   let nextInput = clips.length;
+  const extraAudio = []; // labels mixed under the main audio at the end
+
+  // Overlay layer (split screen): above the clips, below the texts.
+  (project.overlays ?? []).forEach((o, j) => {
+    if (o.start >= total - 0.05) return;
+    const D = Math.min(overlayDuration(o), total - o.start);
+    const idx = nextInput++;
+    if (o.kind === 'image') {
+      inputs.push('-loop', '1', '-framerate', String(fps), '-t', num(D + 0.5), '-i', o.path);
+    } else {
+      inputs.push('-ss', num(o.in), '-t', num(D), '-i', o.path);
+    }
+    const r = overlayRect(o, W, H);
+    const fit =
+      o.fit === 'contain'
+        ? [`scale=${r.w}:${r.h}:force_original_aspect_ratio=decrease:force_divisible_by=2`, `pad=${r.w}:${r.h}:(ow-iw)/2:(oh-ih)/2:color=black`]
+        : [`scale=${r.w}:${r.h}:force_original_aspect_ratio=increase`, `crop=${r.w}:${r.h}`];
+    const f = [
+      'setpts=PTS-STARTPTS',
+      `fps=${fps}`,
+      ...fit,
+      'setsar=1',
+      'format=rgba',
+      `tpad=stop_mode=clone:stop_duration=${num(D)}`,
+      `trim=duration=${num(D)}`,
+      'setpts=PTS-STARTPTS',
+    ];
+    chains.push(`[${idx}:v]${f.join(',')}[ol${j}]`);
+    let src = `ol${j}`;
+    if (r.edge && r.feather > 0) {
+      // Gradient alpha mask, computed once and looped: opaque inside the
+      // region, fading to transparent across the edge facing the other half.
+      const ramp = r.edge === 'bottom' ? `(${r.h - 1}-Y)/${r.feather}` : `Y/${r.feather}`;
+      chains.push(
+        `color=c=white:s=${r.w}x${r.h}:r=${fps},format=gray,geq=lum='255*clip(${ramp}\\,0\\,1)',trim=end_frame=1,loop=loop=-1:size=1[olm${j}]`,
+      );
+      chains.push(`[${src}][olm${j}]alphamerge[olf${j}]`);
+      src = `olf${j}`;
+    }
+    const post = [];
+    if (o.fade) {
+      const fd = Math.min(OVERLAY_FADE, D / 2);
+      post.push(`fade=t=in:st=0:d=${num(fd)}:alpha=1`, `fade=t=out:st=${num(D - fd)}:d=${num(fd)}:alpha=1`);
+    }
+    post.push(`setpts=PTS+${num(o.start)}/TB`);
+    chains.push(`[${src}]${post.join(',')}[olt${j}]`);
+    chains.push(`[${v}][olt${j}]overlay=x=${r.x}:y=${r.y}:enable='between(t,${num(o.start)},${num(o.start + D)})':eof_action=pass[olv${j}]`);
+    v = `olv${j}`;
+
+    if (o.kind === 'video' && o.hasAudio && !o.muted && o.volume > 0) {
+      chains.push(`[${idx}:a]asetpts=PTS-STARTPTS,volume=${num(o.volume)},${AUDIO_FMT},apad,atrim=duration=${num(D)},adelay=delays=${Math.round(o.start * 1000)}:all=1[ola${j}]`);
+      extraAudio.push(`ola${j}`);
+    }
+  });
+
+  // Text overlays: pre-rendered transparent frames, shown between start/end.
   (opts.textInputs ?? []).forEach((text, j) => {
     if (!(text.end > text.start) || text.start >= total) return;
     const end = Math.min(text.end, total);
@@ -169,7 +226,12 @@ export function buildExport(project, opts) {
     }
     if (m.start > 0) ma.push(`adelay=delays=${Math.round(m.start * 1000)}:all=1`);
     chains.push(`[${idx}:a]${ma.join(',')}[music]`);
-    chains.push(`[${a}][music]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[amix]`);
+    extraAudio.push('music');
+  }
+
+  if (extraAudio.length) {
+    const ins = [a, ...extraAudio].map((l) => `[${l}]`).join('');
+    chains.push(`${ins}amix=inputs=${extraAudio.length + 1}:duration=first:dropout_transition=0:normalize=0[amix]`);
     a = 'amix';
   }
 

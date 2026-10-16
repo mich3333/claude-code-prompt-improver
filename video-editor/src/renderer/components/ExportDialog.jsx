@@ -58,7 +58,7 @@ function DialogBody({ close, setBusy }) {
     if (!output) return;
     const project = JSON.parse(JSON.stringify(store.project));
     delete project.media;
-    for (const c of project.clips) delete c.thumbnail;
+    for (const c of [...project.clips, ...(project.overlays ?? [])]) delete c.thumbnail;
 
     setBusy(true);
     setProgress(0);

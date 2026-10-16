@@ -9,7 +9,7 @@ export class Store {
   constructor() {
     this.project = createProject();
     this.project.media = [];
-    this.selection = null; // { type: 'clip' | 'text' | 'music', id }
+    this.selection = null; // { type: 'clip' | 'overlay' | 'text' | 'music', id }
     this.filePath = null;
     this.listeners = new Set();
     this.version = 0; // bumps on every change (for React)
@@ -92,9 +92,9 @@ export class Store {
   }
 
   load(project, filePath) {
-    this.project = { media: [], texts: [], clips: [], music: null, ...project };
+    this.project = { media: [], texts: [], clips: [], overlays: [], music: null, ...project };
     // URLs are derived from paths (older project files stored file:// URLs).
-    for (const item of [...this.project.clips, ...this.project.media, this.project.music]) {
+    for (const item of [...this.project.clips, ...this.project.overlays, ...this.project.media, this.project.music]) {
       if (item?.path) item.url = mediaUrl(item.path);
     }
     this.filePath = filePath;
@@ -120,6 +120,7 @@ export class Store {
     const s = this.selection;
     if (!s) return null;
     if (s.type === 'clip') return this.project.clips.find((c) => c.id === s.id) ?? null;
+    if (s.type === 'overlay') return this.project.overlays.find((o) => o.id === s.id) ?? null;
     if (s.type === 'text') return this.project.texts.find((t) => t.id === s.id) ?? null;
     if (s.type === 'music') return this.project.music;
     return null;
