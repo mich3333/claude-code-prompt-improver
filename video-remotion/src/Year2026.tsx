@@ -238,7 +238,7 @@ const litIndex = (frame: number, S: Schedule) => {
   return best;
 };
 
-const StatCount: React.FC<{ stat: string; f: number }> = ({ stat, f }) => {
+export const StatCount: React.FC<{ stat: string; f: number }> = ({ stat, f }) => {
   const m = /^(\D*?)(\d+(?:\.\d+)?)(.*)$/.exec(stat);
   if (!m) return <>{stat}</>;
   const target = Number(m[2]);
