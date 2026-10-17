@@ -16,6 +16,8 @@ import { SKILL_SCRIPT, SkillExplainer, type SkillProps } from './SkillExplainer'
 import { VoiceSplit, type VoiceSplitProps } from './VoiceSplit';
 import { AgentsGuide, type AgentsProps } from './AgentsGuide';
 import { AGENTS_SCRIPT } from './agents';
+import { MyReel, type ReelProps } from './MyReel';
+import { SAMPLE_REEL } from './reel.sample';
 
 const defaults: WeeklyProps = {
   avatar: null,
@@ -152,6 +154,17 @@ export const RemotionRoot: React.FC = () => (
         const end = props.words?.length ? props.words[props.words.length - 1].end : 10;
         return { durationInFrames: Math.ceil((end + 1.5) * FPS) };
       }}
+    />
+    {/* The personal reel style. Render a real one with --props=reel.json (see README). */}
+    <Composition
+      id="MyReel"
+      component={MyReel}
+      durationInFrames={300}
+      fps={FPS}
+      width={W}
+      height={H}
+      defaultProps={SAMPLE_REEL}
+      calculateMetadata={({ props }: { props: ReelProps }) => ({ durationInFrames: Math.ceil(props.durationSec * FPS) })}
     />
   </>
 );

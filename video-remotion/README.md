@@ -129,6 +129,70 @@ npx remotion render Versus out/vs.mp4 --props='{"match":"openai-anthropic","voic
 
 המגיש מופיע למטה. את התסריט והתוכן עורכים ב-`src/agents.ts`. כל מספר שם נבדק ב-16.10.2026, והמקורות המלאים נמצאים ב-`research_notes/AI agents money 2026/`. מחירים משתנים, אז כדאי לבדוק אותם שוב לפני שמפרסמים.
 
+## הסגנון שלי: `MyReel`, מהקלטה ועד פרסום
+
+זה העיצוב הקבוע של הרילסים שלך:
+- ההקלטה שלך, בלי עיבוד, בתוך מסגרת ירוקה דקה על רקע אפור.
+- פס התקדמות ירוק למעלה.
+- משפט פתיחה בתחילת הסרטון.
+- כתוביות מילה-מילה, והמילה שנאמרת מקבלת קו ירוק מתחתיה.
+- B-roll בשתי צורות:
+  - `split`: את/ה למעלה, והתוכן למטה.
+  - `full`: התוכן במסך מלא, והפנים בעיגול בפינה.
+- כרטיס סיום עם השם שלך.
+
+התנועות בנויות לפי כללי האנימציה של Emil Kowalski:
+- ease-out חזק לכל כניסה.
+- ease-in-out לתזוזה על המסך.
+- שום דבר לא גדל מאפס.
+- השהיה קצרה בין אלמנטים שנכנסים זה אחרי זה.
+
+כל ערכי התנועה נמצאים ב-`src/motion.ts`.
+
+### הסקילים בפרויקט
+
+בתיקייה `.claude/skills/` מותקנים:
+- `remotion-best-practices`: הסקיל הרשמי של Remotion.
+- `animate`, `emil-design-eng`, `review-animations`, `improve-animations`: הסקילים של Emil Kowalski, ברישיון MIT. הרישיון בקובץ `EMIL-LICENSE`.
+
+כשפותחים את התיקייה `video-remotion` ב-Claude Code, הסקילים נטענים לבד.
+
+### הזרימה
+
+1. **הקלטה:** מקליטים את עצמך ושמים את הקובץ ב-`public/face.mp4`.
+2. **תמלול:** מתמללים עם תזמון לכל מילה. אפשר לבקש מ-Claude Code ("תמלל את face.mp4"); הסקיל של Remotion מסביר איך לעשות את זה מקומית עם Whisper. התוצאה היא רשימת מילים בפורמט `Caption`, ומכינים ממנה קובץ `reel.json`. אפשר להיעזר בדוגמה שב-`src/reel.sample.ts`:
+   ```json
+   {
+     "face": "face.mp4",
+     "captions": [{ "text": " בניתי", "startMs": 600, "endMs": 900, "timestampMs": 750, "confidence": null }],
+     "hook": "בניתי עורך וידאו משלי",
+     "hookMs": 2600,
+     "broll": [{ "src": "screen.mp4", "startMs": 4200, "endMs": 8200, "layout": "split" }],
+     "handle": "@השם_שלך",
+     "cta": "עקבו לעוד",
+     "durationSec": 42
+   }
+   ```
+3. **רינדור:** `npx remotion render MyReel out/reel.mp4 --props=reel.json`
+4. **פרסום:** `npm run publish -- --file out/reel.mp4 --caption "..." --to instagram,tiktok --video-url https://...`
+
+### פרסום אוטומטי לאינסטגרם ולטיקטוק
+
+הפרסום משתמש ב-API הרשמיים, בלי שירות ביניים. מעתיקים את `.env.example` ל-`.env` וממלאים את הפרטים. את `.env` לא מעלים ל-git.
+
+**אינסטגרם** (Instagram API with Instagram Login):
+- החשבון צריך להיות מקצועי, Business או Creator.
+- פותחים אפליקציה ב-developers.facebook.com, עם ההרשאות `instagram_business_basic` ו-`instagram_business_content_publish`, ומוציאים טוקן לטווח ארוך. הוא תקף 60 יום, וחידוש שלו: `npm run publish -- refresh-instagram`.
+- אינסטגרם מוריד את הסרטון מקישור ציבורי, ולכן צריך להעלות את ה-MP4 למקום עם קישור ישיר ולהעביר אותו ב-`--video-url`. אפשר לפרסם עד כ-100 פוסטים ב-24 שעות.
+
+**טיקטוק** (Content Posting API):
+- פותחים אפליקציה ב-developers.tiktok.com עם ההרשאות `video.upload` ו-`video.publish`.
+- ברירת המחדל היא `--tiktok-mode inbox`: הסרטון נשלח כטיוטה, ומסיימים את הפרסום באפליקציה של טיקטוק.
+- `--tiktok-mode direct` מפרסם ישר, אבל עד שהאפליקציה עוברת את הבדיקה של טיקטוק, אפשר לפרסם כך רק כ"פרטי" (`SELF_ONLY`), ורק מחשבון פרטי.
+- הטוקן תקף 24 שעות. חידוש: `npm run publish -- refresh-tiktok`.
+
+תמיד כדאי להריץ קודם עם `--dry-run`. במצב הזה הסקריפט רק מדפיס את הבקשות, בלי לשלוח כלום.
+
 ## כל שבוע מחדש
 
 עורכים את `src/scenes.ts`. כל סצנה היא אובייקט אחד, עם:

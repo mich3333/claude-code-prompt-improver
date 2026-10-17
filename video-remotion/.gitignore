@@ -8,3 +8,4 @@ public/voice*
 public/articles/
 public/demos/
 public/face*
+.env
